@@ -2,22 +2,42 @@
 
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
+import { Button } from '@mantine/core';
+import { IconLogout } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
 
 export default function LogoutButton() {
-  const router = useRouter();
   const supabase = createClient();
+  const router = useRouter();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
+    try {
+      await supabase.auth.signOut();
+      router.push('/login');
+      notifications.show({
+        title: 'Logged out',
+        message: 'You have been successfully logged out',
+        color: 'green',
+      });
+    } catch (error) {
+      console.error('Error logging out:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to log out',
+        color: 'red',
+      });
+    }
   };
 
   return (
-    <button
+    <Button
+      variant="subtle"
+      color="red"
+      leftSection={<IconLogout size={16} />}
       onClick={handleLogout}
-      className="px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-600 rounded-full font-medium text-gray-300 text-xs sm:text-sm transition-all duration-300 hover:border-red-500 hover:text-red-400 hover:shadow-lg hover:shadow-red-500/10"
+      size="sm"
     >
-      Sign Out
-    </button>
+      Logout
+    </Button>
   );
 } 

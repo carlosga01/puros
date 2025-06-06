@@ -1,65 +1,211 @@
 import Link from 'next/link';
+import {
+  Container,
+  Title,
+  Text,
+  Button,
+  Stack,
+  Group,
+  Box,
+  Center
+} from '@mantine/core';
+import { IconArrowRight, IconUsers } from '@tabler/icons-react';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden relative">
-      {/* Background gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-900/20 via-black to-red-900/30"></div>
-      
-      <div className="relative z-10 flex flex-col min-h-screen">
+    <Box
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, rgba(18, 18, 23, 0.95) 0%, rgba(30, 30, 40, 0.9) 100%)',
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      {/* Background Effects */}
+      <Box
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(circle at 25% 25%, rgba(255, 193, 68, 0.15) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(255, 154, 0, 0.1) 0%, transparent 50%)',
+        }}
+      />
+
+      <Container size="xl" style={{ position: 'relative', zIndex: 10, minHeight: '100vh' }}>
         {/* Header */}
-        <header className="p-4 sm:p-6 md:p-8">
-          <div className="flex items-center">
-            <span className="text-xl sm:text-2xl font-bold tracking-tight text-amber-400">Puros</span>
-          </div>
-        </header>
+        <Group justify="space-between" align="center" py="lg">
+          <Title
+            order={1}
+            size="h3"
+            c="brand.6"
+            style={{ fontWeight: 700, letterSpacing: '-0.02em' }}
+          >
+            Puros
+          </Title>
+          
+          <Group>
+            <Button
+              component={Link}
+              href="/login"
+              variant="subtle"
+              color="gray"
+              size="sm"
+            >
+              Sign In
+            </Button>
+          </Group>
+        </Group>
 
         {/* Main Content */}
-        <main className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="space-y-6 sm:space-y-8">
-              {/* Company Name */}
-              <div className="space-y-4 sm:space-y-6">
-                <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-black tracking-tighter leading-none">
-                  <span className="block bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 bg-clip-text text-transparent">
-                    PUROS
-                  </span>
-                </h1>
-                
-                {/* Description */}
-                <div className="space-y-3 sm:space-y-4">
-                  <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white font-light tracking-wide">
-                    Premium Cigar Community
-                  </p>
-                  <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-300 font-light max-w-xl sm:max-w-2xl mx-auto leading-relaxed px-2 sm:px-0">
-                    Discover exceptional cigars, share detailed reviews, and connect with fellow aficionados in the ultimate premium tobacco experience.
-                  </p>
-                </div>
-              </div>
+        <Center style={{ minHeight: 'calc(100vh - 200px)' }}>
+          <Stack align="center" gap="xl" ta="center" maw={800}>
+            {/* Hero Title */}
+            <Stack gap="md" align="center">
+              <Title
+                order={1}
+                c="brand.6"
+                style={{
+                  fontSize: 'clamp(3rem, 12vw, 8rem)',
+                  fontWeight: 900,
+                  lineHeight: 0.9,
+                  letterSpacing: '-0.05em',
+                  textShadow: '0 0 40px rgba(255, 193, 68, 0.3)',
+                }}
+              >
+                PUROS
+              </Title>
+              
+              <Text
+                size="xl"
+                c="white"
+                fw={300}
+                style={{ letterSpacing: '0.02em' }}
+              >
+                Premium Cigar Community
+              </Text>
+            </Stack>
 
-              {/* CTA Buttons */}
-              <div className="flex flex-col gap-3 sm:gap-4 justify-center items-center pt-6 sm:pt-8 px-4 sm:px-0">
-                <Link
-                  href="/signup"
-                  className="group relative w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full font-semibold text-black text-base sm:text-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/25"
+            {/* Description */}
+            <Text
+              size="lg"
+              c="dimmed"
+              fw={300}
+              style={{ 
+                lineHeight: 1.6,
+                maxWidth: '600px',
+              }}
+            >
+              Discover exceptional cigars, share detailed reviews, and connect with fellow aficionados 
+              in the ultimate premium tobacco experience.
+            </Text>
+
+            {/* Features */}
+            <Group justify="center" gap="xl" mt="md">
+              <Stack align="center" gap="xs">
+                <Box
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    background: 'rgba(255, 193, 68, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
                 >
-                  <span className="relative z-10">Join the Community</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </Link>
-                <Link
+                  <IconUsers size={24} color="var(--mantine-color-brand-6)" />
+                </Box>
+                <Text size="sm" c="dimmed" fw={500}>
+                  Community
+                </Text>
+              </Stack>
+
+              <Stack align="center" gap="xs">
+                <Box
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    background: 'rgba(255, 193, 68, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text size="xl" c="brand.6">⭐</Text>
+                </Box>
+                <Text size="sm" c="dimmed" fw={500}>
+                  Reviews
+                </Text>
+              </Stack>
+
+              <Stack align="center" gap="xs">
+                <Box
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    background: 'rgba(255, 193, 68, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text size="xl" c="brand.6">🔍</Text>
+                </Box>
+                <Text size="sm" c="dimmed" fw={500}>
+                  Discovery
+                </Text>
+              </Stack>
+            </Group>
+
+            {/* CTA Buttons */}
+            <Stack gap="md" align="center" mt="xl">
+              <Button
+                component={Link}
+                href="/signup"
+                size="xl"
+                variant="gradient"
+                gradient={{ from: 'brand.6', to: 'brand.8' }}
+                rightSection={<IconArrowRight size={18} />}
+                radius="xl"
+                style={{
+                  minWidth: 200,
+                  boxShadow: '0 8px 32px rgba(255, 193, 68, 0.3)',
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                }}
+              >
+                Join the Community
+              </Button>
+              
+              <Text size="xs" c="dimmed">
+                Already a member?{' '}
+                <Text
+                  component={Link}
                   href="/login"
-                  className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 border border-gray-600 rounded-full font-semibold text-white text-base sm:text-lg transition-all duration-300 hover:border-amber-500 hover:text-amber-400 hover:shadow-lg hover:shadow-amber-500/10"
+                  c="brand.4"
+                  style={{ textDecoration: 'none' }}
+                  inherit
                 >
-                  Sign In
-                </Link>
-              </div>
-            </div>
-          </div>
-        </main>
+                  Sign in here
+                </Text>
+              </Text>
+            </Stack>
+          </Stack>
+        </Center>
 
         {/* Bottom accent */}
-        <div className="h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
-      </div>
-    </div>
+        <Box
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 4,
+            background: 'linear-gradient(90deg, transparent, var(--mantine-color-brand-6), transparent)',
+          }}
+        />
+      </Container>
+    </Box>
   );
 }

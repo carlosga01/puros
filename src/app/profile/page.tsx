@@ -3,8 +3,25 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
+import {
+  Container,
+  Paper,
+  Title,
+  Text,
+  TextInput,
+  Button,
+  Stack,
+  Group,
+  Box,
+  Avatar,
+  FileInput,
+  Loader,
+  Center,
+  Alert,
+  Anchor
+} from '@mantine/core';
+import { IconArrowLeft, IconCamera, IconAlertCircle, IconCheck } from '@tabler/icons-react';
 
 interface Profile {
   id: string;
@@ -55,8 +72,7 @@ export default function ProfilePage() {
     getProfile();
   }, [router, supabase]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileChange = (file: File | null) => {
     if (file) {
       setProfilePicture(file);
       const url = URL.createObjectURL(file);
@@ -135,148 +151,519 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto"></div>
-          <p className="mt-4 text-gray-400">Loading profile...</p>
-        </div>
-      </div>
+      <Box
+        style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Animated Background Elements */}
+        <Box
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: `
+              radial-gradient(circle at 30% 30%, rgba(255, 193, 68, 0.08) 0%, transparent 50%),
+              radial-gradient(circle at 70% 70%, rgba(255, 154, 0, 0.06) 0%, transparent 50%)
+            `,
+          }}
+        />
+        
+        <Center style={{ minHeight: '100vh', position: 'relative', zIndex: 10 }}>
+          <Stack align="center" gap="lg">
+            <Box
+              style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, rgba(255, 193, 68, 0.2) 0%, rgba(255, 154, 0, 0.1) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                animation: 'pulse-glow 2s ease-in-out infinite',
+              }}
+            >
+              <Loader size="lg" color="#ffc144" />
+            </Box>
+            <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.1rem' }}>
+              Loading profile...
+            </Text>
+          </Stack>
+        </Center>
+      </Box>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Background gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-900/10 via-black to-red-900/20"></div>
-      
-      <div className="relative z-10">
+    <Box
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Animated Background Elements */}
+      <Box
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: `
+            radial-gradient(circle at 25% 25%, rgba(255, 193, 68, 0.08) 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, rgba(255, 154, 0, 0.06) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(255, 193, 68, 0.04) 0%, transparent 40%)
+          `,
+        }}
+      />
+
+      {/* Floating Orbs */}
+      <Box
+        style={{
+          position: 'absolute',
+          top: '15%',
+          right: '10%',
+          width: '300px',
+          height: '300px',
+          background: 'radial-gradient(circle, rgba(255, 193, 68, 0.08) 0%, transparent 70%)',
+          borderRadius: '50%',
+          filter: 'blur(50px)',
+          animation: 'float 8s ease-in-out infinite',
+        }}
+      />
+      <Box
+        style={{
+          position: 'absolute',
+          bottom: '20%',
+          left: '15%',
+          width: '200px',
+          height: '200px',
+          background: 'radial-gradient(circle, rgba(255, 154, 0, 0.06) 0%, transparent 70%)',
+          borderRadius: '50%',
+          filter: 'blur(40px)',
+          animation: 'float 10s ease-in-out infinite reverse',
+        }}
+      />
+
+      <Container size="md" py="xl" style={{ position: 'relative', zIndex: 10 }}>
         {/* Header */}
-        <header className="border-b border-gray-800/50 backdrop-blur-sm">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Link
-                  href="/home"
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  ← Back
-                </Link>
-                <h1 className="text-xl sm:text-2xl font-bold">My Profile</h1>
-              </div>
-            </div>
-          </div>
-        </header>
+        <Paper
+          shadow="0 20px 40px rgba(0, 0, 0, 0.3)"
+          mb="xl"
+          p={{ base: 'lg', sm: 'xl' }}
+          radius="xl"
+          style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+          }}
+        >
+          <Group justify="space-between" align="center">
+            <Anchor
+              component={Link}
+              href="/home"
+              style={{ 
+                textDecoration: 'none',
+                color: 'rgba(255, 255, 255, 0.7)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#ffc144';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+              }}
+            >
+              <Group gap="sm">
+                <IconArrowLeft size={20} />
+                <Text fw={500}>Back to Home</Text>
+              </Group>
+            </Anchor>
+            <Title 
+              order={1} 
+              style={{
+                background: 'linear-gradient(135deg, #ffffff 0%, #ffc144 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontSize: '1.8rem',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              My Profile
+            </Title>
+          </Group>
+        </Paper>
 
         {/* Main Content */}
-        <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-          <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
-            {/* Profile Picture Section */}
-            <div className="text-center">
-              <div className="relative inline-block">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center overflow-hidden">
-                  {profilePictureUrl ? (
-                    <Image
+        <Paper
+          shadow="0 25px 50px rgba(0, 0, 0, 0.3)"
+          p={{ base: 'xl', sm: '3rem' }}
+          radius="2xl"
+          style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Form Background Glow */}
+          <Box
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '120%',
+              height: '120%',
+              background: 'radial-gradient(circle, rgba(255, 193, 68, 0.05) 0%, transparent 70%)',
+              filter: 'blur(60px)',
+              zIndex: 0,
+            }}
+          />
+
+          <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
+            <Stack gap="2rem">
+              {/* Profile Picture Section */}
+              <Stack align="center" gap="lg">
+                <Box style={{ position: 'relative' }}>
+                  <Box
+                    style={{
+                      padding: '4px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #ffc144 0%, #ff9a00 100%)',
+                    }}
+                  >
+                    <Avatar
                       src={profilePictureUrl}
-                      alt="Profile"
-                      width={128}
-                      height={128}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-3xl sm:text-4xl text-gray-400">👤</span>
-                  )}
-                </div>
-                <label className="absolute bottom-0 right-0 w-8 h-8 sm:w-10 sm:h-10 bg-amber-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-amber-600 transition-colors">
-                  <span className="text-sm sm:text-base text-black">📷</span>
-                  <input
-                    type="file"
+                      size={140}
+                      radius="50%"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '3px solid rgba(255, 255, 255, 0.2)',
+                      }}
+                    >
+                      {!profilePictureUrl && (
+                        <Text size="3rem" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                          👤
+                        </Text>
+                      )}
+                    </Avatar>
+                  </Box>
+                  <FileInput
                     accept="image/*"
                     onChange={handleFileChange}
-                    className="hidden"
+                    style={{ display: 'none' }}
+                    id="profile-picture-input"
                   />
-                </label>
-              </div>
-              <p className="text-xs sm:text-sm text-gray-500 mt-3">Click the camera icon to change your profile picture</p>
-            </div>
+                  <Box
+                    component="label"
+                    htmlFor="profile-picture-input"
+                    style={{
+                      position: 'absolute',
+                      bottom: 8,
+                      right: 8,
+                      width: 44,
+                      height: 44,
+                      background: 'linear-gradient(135deg, #ffc144 0%, #ff9a00 100%)',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 4px 15px rgba(255, 193, 68, 0.4)',
+                      border: '2px solid rgba(255, 255, 255, 0.2)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.1)';
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 193, 68, 0.6)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 193, 68, 0.4)';
+                    }}
+                  >
+                    <IconCamera size={20} color="rgba(0, 0, 0, 0.8)" />
+                  </Box>
+                </Box>
+                <Text 
+                  size="md" 
+                  ta="center" 
+                  maw={300}
+                  style={{ 
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Click the camera icon to update your profile picture
+                </Text>
+              </Stack>
 
-            {/* Form Fields */}
-            <div className="space-y-4 sm:space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    First Name *
-                  </label>
-                  <input
-                    type="text"
+              {/* Form Fields */}
+              <Stack gap="xl">
+                <Group grow>
+                  <TextInput
+                    label="First Name"
+                    placeholder="Enter your first name"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     required
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all duration-200 text-sm sm:text-base"
+                    size="lg"
+                    radius="lg"
+                    styles={{
+                      label: {
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontWeight: 500,
+                        marginBottom: '0.5rem',
+                        fontSize: '1rem',
+                      },
+                      input: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontSize: '1rem',
+                        padding: '1rem',
+                        transition: 'all 0.2s ease',
+                        '&:focus': {
+                          borderColor: 'rgba(255, 193, 68, 0.6)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                          boxShadow: '0 0 0 3px rgba(255, 193, 68, 0.1)',
+                        },
+                        '&::placeholder': {
+                          color: 'rgba(255, 255, 255, 0.4)',
+                        }
+                      }
+                    }}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Last Name *
-                  </label>
-                  <input
-                    type="text"
+                  <TextInput
+                    label="Last Name"
+                    placeholder="Enter your last name"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all duration-200 text-sm sm:text-base"
+                    size="lg"
+                    radius="lg"
+                    styles={{
+                      label: {
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontWeight: 500,
+                        marginBottom: '0.5rem',
+                        fontSize: '1rem',
+                      },
+                      input: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontSize: '1rem',
+                        padding: '1rem',
+                        transition: 'all 0.2s ease',
+                        '&:focus': {
+                          borderColor: 'rgba(255, 193, 68, 0.6)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                          boxShadow: '0 0 0 3px rgba(255, 193, 68, 0.1)',
+                        },
+                        '&::placeholder': {
+                          color: 'rgba(255, 255, 255, 0.4)',
+                        }
+                      }
+                    }}
                   />
-                </div>
-              </div>
+                </Group>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
+                <TextInput
+                  label="Email Address"
                   value={user?.email || ''}
                   disabled
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-gray-400 text-sm sm:text-base cursor-not-allowed"
+                  size="lg"
+                  radius="lg"
+                  description="Email address cannot be changed"
+                  styles={{
+                    label: {
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontWeight: 500,
+                      marginBottom: '0.5rem',
+                      fontSize: '1rem',
+                    },
+                    input: {
+                      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: 'rgba(255, 255, 255, 0.6)',
+                      fontSize: '1rem',
+                      padding: '1rem',
+                      cursor: 'not-allowed',
+                    },
+                    description: {
+                      color: 'rgba(255, 255, 255, 0.5)',
+                      fontSize: '0.9rem',
+                      marginTop: '0.5rem',
+                    }
+                  }}
                 />
-                <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
-              </div>
-            </div>
+              </Stack>
 
-            {/* Status Messages */}
-            {error && (
-              <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-3 sm:p-4">
-                <p className="text-red-400 text-xs sm:text-sm">{error}</p>
-              </div>
-            )}
+              {/* Status Messages */}
+              {error && (
+                <Alert
+                  icon={<IconAlertCircle size={18} />}
+                  color="red"
+                  variant="light"
+                  radius="lg"
+                  styles={{
+                    root: {
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      backdropFilter: 'blur(10px)',
+                    },
+                    icon: {
+                      color: '#ef4444',
+                    },
+                    message: {
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontSize: '1rem',
+                    }
+                  }}
+                >
+                  {error}
+                </Alert>
+              )}
 
-            {success && (
-              <div className="bg-green-900/20 border border-green-500/50 rounded-xl p-3 sm:p-4">
-                <p className="text-green-400 text-xs sm:text-sm">{success}</p>
-              </div>
-            )}
+              {success && (
+                <Alert
+                  icon={<IconCheck size={18} />}
+                  color="green"
+                  variant="light"
+                  radius="lg"
+                  styles={{
+                    root: {
+                      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      backdropFilter: 'blur(10px)',
+                    },
+                    icon: {
+                      color: '#10b981',
+                    },
+                    message: {
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontSize: '1rem',
+                    }
+                  }}
+                >
+                  {success}
+                </Alert>
+              )}
 
-            {/* Save Button */}
-            <button
-              type="submit"
-              disabled={saving || !firstName.trim() || !lastName.trim()}
-              className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl font-semibold text-black transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-sm sm:text-base"
-            >
-              {saving ? 'Saving changes...' : 'Save Changes'}
-            </button>
+              {/* Save Button */}
+              <Button
+                type="submit"
+                fullWidth
+                loading={saving}
+                disabled={!firstName.trim() || !lastName.trim()}
+                size="xl"
+                radius="xl"
+                style={{
+                  background: 'linear-gradient(135deg, #ffc144 0%, #ff9a00 100%)',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '1.2rem',
+                  padding: '1.2rem',
+                  boxShadow: '0 12px 40px rgba(255, 193, 68, 0.4)',
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 16px 50px rgba(255, 193, 68, 0.5)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(255, 193, 68, 0.4)';
+                }}
+              >
+                Save Changes
+              </Button>
 
-            {/* Profile Info */}
-            {profile && (
-              <div className="bg-gray-900/30 rounded-xl p-4 sm:p-6 border border-gray-700/50">
-                <h3 className="text-lg font-semibold mb-3">Account Information</h3>
-                <div className="space-y-2 text-sm text-gray-400">
-                  <p><span className="text-gray-300">Member since:</span> {new Date(profile.created_at).toLocaleDateString()}</p>
-                  <p><span className="text-gray-300">Last updated:</span> {new Date(profile.updated_at).toLocaleDateString()}</p>
-                </div>
-              </div>
-            )}
+              {/* Profile Info */}
+              {profile && (
+                <Paper
+                  p="xl"
+                  radius="xl"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    backdropFilter: 'blur(10px)',
+                  }}
+                >
+                  <Title 
+                    order={4} 
+                    mb="lg"
+                    style={{
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontSize: '1.2rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Account Information
+                  </Title>
+                  <Stack gap="md">
+                    <Group justify="space-between">
+                      <Text 
+                        size="md" 
+                        style={{ 
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontWeight: 500,
+                        }}
+                      >
+                        Member since:
+                      </Text>
+                      <Text 
+                        size="md" 
+                        style={{ 
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {new Date(profile.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </Text>
+                    </Group>
+                    <Group justify="space-between">
+                      <Text 
+                        size="md" 
+                        style={{ 
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontWeight: 500,
+                        }}
+                      >
+                        Last updated:
+                      </Text>
+                      <Text 
+                        size="md" 
+                        style={{ 
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {new Date(profile.updated_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </Text>
+                    </Group>
+                  </Stack>
+                </Paper>
+              )}
+            </Stack>
           </form>
-        </main>
-      </div>
-    </div>
+        </Paper>
+      </Container>
+    </Box>
   );
 } 

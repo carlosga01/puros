@@ -4,45 +4,79 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
+import {
+  Container,
+  Paper,
+  Title,
+  Text,
+  TextInput,
+  PasswordInput,
+  Button,
+  Stack,
+  Anchor,
+  Alert,
+  Center,
+  Box,
+  Group,
+  Progress
+} from '@mantine/core';
+import { useForm } from '@mantine/form';
+import { notifications } from '@mantine/notifications';
+import { IconMail, IconLock, IconArrowLeft, IconAlertCircle, IconCheck } from '@tabler/icons-react';
 
 export default function SignupPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const router = useRouter();
   const supabase = createClient();
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm({
+    initialValues: {
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
+    validate: {
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
+      password: (value) => {
+        if (value.length < 6) return 'Password must be at least 6 characters';
+        return null;
+      },
+      confirmPassword: (value, values) =>
+        value !== values.password ? 'Passwords do not match' : null,
+    },
+  });
+
+  const getPasswordStrength = (password: string) => {
+    let strength = 0;
+    if (password.length >= 6) strength += 25;
+    if (password.length >= 8) strength += 25;
+    if (/[A-Z]/.test(password)) strength += 25;
+    if (/[0-9]/.test(password)) strength += 25;
+    return strength;
+  };
+
+  const handleSignup = async (values: typeof form.values) => {
     setLoading(true);
     setError('');
     setMessage('');
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      setLoading(false);
-      return;
-    }
-
     try {
       const { error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: values.email,
+        password: values.password,
       });
 
       if (error) {
         setError(error.message);
       } else {
         setMessage('Check your email for a confirmation link!');
+        notifications.show({
+          title: 'Account Created!',
+          message: 'Please check your email to verify your account',
+          color: 'green',
+        });
         setTimeout(() => {
           router.push('/login');
         }, 3000);
@@ -54,87 +88,378 @@ export default function SignupPage() {
     }
   };
 
+  const passwordStrength = getPasswordStrength(form.values.password);
+
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 sm:px-6">
-      {/* Background gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-900/10 via-black to-red-900/20"></div>
+    <Box
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Animated Background Elements */}
+      <Box
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: `
+            radial-gradient(circle at 30% 30%, rgba(255, 193, 68, 0.1) 0%, transparent 40%),
+            radial-gradient(circle at 70% 70%, rgba(255, 154, 0, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 50% 20%, rgba(255, 193, 68, 0.05) 0%, transparent 30%)
+          `,
+        }}
+      />
       
-      <div className="relative z-10 w-full max-w-sm sm:max-w-md">
-        <div className="text-center mb-6 sm:mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-full mb-4 sm:mb-6">
-            <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">P</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">Join the Club</h1>
-          <p className="text-gray-400 text-sm sm:text-base">Create your Puros account</p>
-        </div>
+      {/* Floating Orbs */}
+      <Box
+        style={{
+          position: 'absolute',
+          top: '15%',
+          left: '10%',
+          width: '250px',
+          height: '250px',
+          background: 'radial-gradient(circle, rgba(255, 193, 68, 0.12) 0%, transparent 70%)',
+          borderRadius: '50%',
+          filter: 'blur(35px)',
+          animation: 'float 7s ease-in-out infinite',
+        }}
+      />
+      <Box
+        style={{
+          position: 'absolute',
+          bottom: '15%',
+          right: '15%',
+          width: '180px',
+          height: '180px',
+          background: 'radial-gradient(circle, rgba(255, 154, 0, 0.1) 0%, transparent 70%)',
+          borderRadius: '50%',
+          filter: 'blur(25px)',
+          animation: 'float 9s ease-in-out infinite reverse',
+        }}
+      />
 
-        <form onSubmit={handleSignup} className="space-y-5 sm:space-y-6">
-          <div className="space-y-3 sm:space-y-4">
-            <div>
-              <input
-                type="email"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all duration-200 text-sm sm:text-base"
-              />
-            </div>
-            <div>
-              <input
-                type="password"
-                placeholder="Password (min. 6 characters)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all duration-200 text-sm sm:text-base"
-              />
-            </div>
-            <div>
-              <input
-                type="password"
-                placeholder="Confirm password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all duration-200 text-sm sm:text-base"
-              />
-            </div>
-          </div>
+      <Container size="xs" style={{ position: 'relative', zIndex: 10 }} px={{ base: 'md', sm: 'xl' }}>
+        <Center style={{ minHeight: '100vh' }}>
+          <Stack w="100%" maw={440} px={{ base: 'sm', sm: 0 }}>
+            {/* Header */}
+            <Stack align="center" gap="xl" mb="xl">
+              <Box
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: '24px',
+                  background: 'linear-gradient(135deg, rgba(255, 193, 68, 0.2) 0%, rgba(255, 154, 0, 0.1) 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid rgba(255, 193, 68, 0.3)',
+                  boxShadow: '0 8px 32px rgba(255, 193, 68, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                }}
+              >
+                <Text size="2rem" fw={700} c="brand.4" style={{ fontFamily: 'serif' }}>
+                  P
+                </Text>
+              </Box>
+              <Stack align="center" gap="sm">
+                <Title 
+                  order={1} 
+                  size="2.5rem" 
+                  ta="center"
+                  style={{
+                    background: 'linear-gradient(135deg, #ffffff 0%, rgba(255, 193, 68, 0.8) 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  Join the Club
+                </Title>
+                <Text c="dimmed" ta="center" size="lg" style={{ opacity: 0.8 }}>
+                  Start your premium cigar journey
+                </Text>
+              </Stack>
+            </Stack>
 
-          {error && (
-            <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-3 sm:p-4">
-              <p className="text-red-400 text-xs sm:text-sm">{error}</p>
-            </div>
-          )}
+            {/* Signup Form */}
+            <Paper
+              shadow="0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+              p={{ base: 'xl', sm: '2rem' }}
+              radius="xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+              }}
+            >
+              <form onSubmit={form.onSubmit(handleSignup)}>
+                <Stack gap="xl">
+                  <TextInput
+                    label="Email Address"
+                    placeholder="your@email.com"
+                    leftSection={<IconMail size={18} />}
+                    required
+                    size="lg"
+                    {...form.getInputProps('email')}
+                    styles={{
+                      label: {
+                        fontSize: '0.95rem',
+                        fontWeight: 500,
+                        marginBottom: '0.5rem',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                      },
+                      input: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '12px',
+                        padding: '1rem 1rem 1rem 3rem',
+                        fontSize: '1rem',
+                        transition: 'all 0.2s ease',
+                        '&:focus': {
+                          borderColor: 'rgba(255, 193, 68, 0.6)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                          boxShadow: '0 0 0 3px rgba(255, 193, 68, 0.1)',
+                        },
+                        '&::placeholder': {
+                          color: 'rgba(255, 255, 255, 0.4)',
+                        }
+                      },
+                      section: {
+                        color: 'rgba(255, 193, 68, 0.7)',
+                      }
+                    }}
+                  />
 
-          {message && (
-            <div className="bg-green-900/20 border border-green-500/50 rounded-xl p-3 sm:p-4">
-              <p className="text-green-400 text-xs sm:text-sm">{message}</p>
-            </div>
-          )}
+                  <Stack gap="md">
+                    <PasswordInput
+                      label="Password"
+                      placeholder="Create a strong password"
+                      leftSection={<IconLock size={18} />}
+                      required
+                      size="lg"
+                      {...form.getInputProps('password')}
+                      styles={{
+                        label: {
+                          fontSize: '0.95rem',
+                          fontWeight: 500,
+                          marginBottom: '0.5rem',
+                          color: 'rgba(255, 255, 255, 0.9)',
+                        },
+                        input: {
+                          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '12px',
+                          padding: '1rem 1rem 1rem 3rem',
+                          fontSize: '1rem',
+                          transition: 'all 0.2s ease',
+                          '&:focus': {
+                            borderColor: 'rgba(255, 193, 68, 0.6)',
+                            backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                            boxShadow: '0 0 0 3px rgba(255, 193, 68, 0.1)',
+                          },
+                          '&::placeholder': {
+                            color: 'rgba(255, 255, 255, 0.4)',
+                          }
+                        },
+                        section: {
+                          color: 'rgba(255, 193, 68, 0.7)',
+                        }
+                      }}
+                    />
+                    
+                    {form.values.password.length > 0 && (
+                      <Stack gap="sm">
+                        <Group justify="space-between">
+                          <Text size="sm" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                            Password strength
+                          </Text>
+                          <Text 
+                            size="sm" 
+                            fw={600}
+                            style={{ 
+                              color: passwordStrength < 50 ? '#ef4444' : passwordStrength < 100 ? '#f59e0b' : '#10b981'
+                            }}
+                          >
+                            {passwordStrength < 50 ? 'Weak' : passwordStrength < 100 ? 'Good' : 'Strong'}
+                          </Text>
+                        </Group>
+                        <Progress
+                          value={passwordStrength}
+                          color={passwordStrength < 50 ? 'red' : passwordStrength < 100 ? 'yellow' : 'green'}
+                          size="md"
+                          radius="xl"
+                          style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          }}
+                        />
+                      </Stack>
+                    )}
+                  </Stack>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl font-semibold text-black transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-sm sm:text-base"
-          >
-            {loading ? 'Creating account...' : 'Create Account'}
-          </button>
+                  <PasswordInput
+                    label="Confirm Password"
+                    placeholder="Confirm your password"
+                    leftSection={<IconLock size={18} />}
+                    required
+                    size="lg"
+                    {...form.getInputProps('confirmPassword')}
+                    styles={{
+                      label: {
+                        fontSize: '0.95rem',
+                        fontWeight: 500,
+                        marginBottom: '0.5rem',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                      },
+                      input: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '12px',
+                        padding: '1rem 1rem 1rem 3rem',
+                        fontSize: '1rem',
+                        transition: 'all 0.2s ease',
+                        '&:focus': {
+                          borderColor: 'rgba(255, 193, 68, 0.6)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                          boxShadow: '0 0 0 3px rgba(255, 193, 68, 0.1)',
+                        },
+                        '&::placeholder': {
+                          color: 'rgba(255, 255, 255, 0.4)',
+                        }
+                      },
+                      section: {
+                        color: 'rgba(255, 193, 68, 0.7)',
+                      }
+                    }}
+                  />
 
-          <div className="text-center space-y-3 sm:space-y-4">
-            <p className="text-gray-400 text-sm sm:text-base">
-              Already have an account?{' '}
-              <Link href="/login" className="text-amber-400 hover:text-amber-300 font-medium transition-colors">
-                Sign in
-              </Link>
-            </p>
-            <Link href="/" className="text-gray-500 hover:text-gray-400 text-xs sm:text-sm transition-colors block">
-              ← Back to home
-            </Link>
-          </div>
-        </form>
-      </div>
-    </div>
+                  {error && (
+                    <Alert
+                      icon={<IconAlertCircle size={18} />}
+                      color="red"
+                      variant="light"
+                      radius="lg"
+                      styles={{
+                        root: {
+                          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          backdropFilter: 'blur(10px)',
+                        },
+                        icon: {
+                          color: '#ef4444',
+                        },
+                        message: {
+                          color: 'rgba(255, 255, 255, 0.9)',
+                        }
+                      }}
+                    >
+                      {error}
+                    </Alert>
+                  )}
+
+                  {message && (
+                    <Alert
+                      icon={<IconCheck size={18} />}
+                      color="green"
+                      variant="light"
+                      radius="lg"
+                      styles={{
+                        root: {
+                          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          backdropFilter: 'blur(10px)',
+                        },
+                        icon: {
+                          color: '#10b981',
+                        },
+                        message: {
+                          color: 'rgba(255, 255, 255, 0.9)',
+                        }
+                      }}
+                    >
+                      {message}
+                    </Alert>
+                  )}
+
+                  <Button
+                    type="submit"
+                    fullWidth
+                    loading={loading}
+                    size="lg"
+                    radius="xl"
+                    style={{
+                      background: 'linear-gradient(135deg, #ffc144 0%, #ff9a00 100%)',
+                      border: 'none',
+                      fontWeight: 600,
+                      fontSize: '1.1rem',
+                      padding: '1rem',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 8px 25px rgba(255, 193, 68, 0.3)',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 12px 35px rgba(255, 193, 68, 0.4)',
+                      }
+                    }}
+                  >
+                    Create Account
+                  </Button>
+                </Stack>
+              </form>
+            </Paper>
+
+            {/* Footer Links */}
+            <Stack align="center" gap="lg" mt="xl">
+              <Text size="md" ta="center" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                Already have an account?{' '}
+                <Anchor 
+                  component={Link} 
+                  href="/login" 
+                  style={{ 
+                    color: '#ffc144',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#ff9a00';
+                    e.currentTarget.style.textDecoration = 'underline';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#ffc144';
+                    e.currentTarget.style.textDecoration = 'none';
+                  }}
+                >
+                  Sign in here
+                </Anchor>
+              </Text>
+              
+              <Anchor
+                component={Link}
+                href="/"
+                style={{ 
+                  textDecoration: 'none',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
+                }}
+              >
+                <Group gap="xs" justify="center">
+                  <IconArrowLeft size={16} />
+                  <Text size="sm" fw={500}>Back to home</Text>
+                </Group>
+              </Anchor>
+            </Stack>
+          </Stack>
+        </Center>
+      </Container>
+    </Box>
   );
 } 

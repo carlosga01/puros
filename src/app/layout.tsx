@@ -1,35 +1,59 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import { Inter } from "next/font/google";
+import { ColorSchemeScript, MantineProvider } from '@mantine/core';
+import { Notifications } from '@mantine/notifications';
+import { ModalsProvider } from '@mantine/modals';
+import './globals.css';
+import '@mantine/core/styles.css';
+import '@mantine/dates/styles.css';
+import '@mantine/notifications/styles.css';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Puros | Premium Cigar Reviews & Community",
-  description: "Your premium destination for cigar reviews, recommendations, and community. Discover new cigars and connect with fellow aficionados.",
+  title: "Puros - Premium Cigar Hub",
+  description: "Share cigar reviews and discover new premium cigars",
 };
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full dark">
+    <html lang="en">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+        <ColorSchemeScript />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} h-full antialiased bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}>
-        {children}
+      <body className={inter.className}>
+        <MantineProvider
+          defaultColorScheme="dark"
+          theme={{
+            colors: {
+              brand: [
+                '#fff8dc',
+                '#ffedba',
+                '#ffe39c',
+                '#ffd97d',
+                '#ffce5f',
+                '#ffc444',
+                '#ffb829',
+                '#f59e0b',
+                '#d97706',
+                '#92400e'
+              ],
+            },
+            primaryColor: 'brand',
+            defaultRadius: 'md',
+            fontFamily: inter.style.fontFamily,
+          }}
+        >
+          <ModalsProvider>
+            <Notifications position="top-right" />
+            {children}
+          </ModalsProvider>
+        </MantineProvider>
       </body>
     </html>
-  )
+  );
 }

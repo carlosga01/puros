@@ -1,129 +1,441 @@
+import { Container, Title, Text, Grid, GridCol, Stack, Group, Badge, Avatar, Box } from '@mantine/core';
+import { IconStar, IconEye, IconUsers, IconTrendingUp, IconPlus, IconCalendar, IconHeart, IconMessageCircle, IconShare } from '@tabler/icons-react';
 import { createClient } from '@/utils/supabase/server';
-import { redirect } from 'next/navigation';
-import LogoutButton from '../../components/LogoutButton';
-import ProfileIcon from '../../components/ProfileIcon';
+import Link from 'next/link';
+import ImageCarousel from '@/components/ImageCarousel';
+import DashboardCard from '@/components/DashboardCard';
+import InteractiveCard from '@/components/InteractiveCard';
 
 export default async function HomePage() {
   const supabase = await createClient();
   
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    redirect('/login');
-  }
+  // Get recent reviews
+  const { data: recentReviews } = await supabase
+    .from('reviews')
+    .select(`
+      *,
+      profiles!inner (
+        id,
+        username,
+        avatar_url
+      )
+    `)
+    .order('created_at', { ascending: false })
+    .limit(4);
 
-  // Fetch user profile
-  const { data: profile } = await supabase
+  // Get user stats
+  const { count: totalReviews } = await supabase
+    .from('reviews')
+    .select('*', { count: 'exact', head: true });
+
+  const { count: totalUsers } = await supabase
     .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
-
-  // If no profile exists, redirect to profile setup
-  if (!profile) {
-    redirect('/profile-setup');
-  }
+    .select('*', { count: 'exact', head: true });
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Background gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-900/10 via-black to-red-900/20"></div>
-      
-      <div className="relative z-10">
-        {/* Header */}
-        <header className="border-b border-gray-800/50 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
-              <div className="flex items-center space-x-3 sm:space-x-4">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">Puros</h1>
-                  <p className="text-xs sm:text-sm text-gray-400">Premium Cigar Hub</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4 sm:space-x-6 w-full sm:w-auto justify-between sm:justify-end">
-                <div className="flex items-center space-x-3">
-                  <ProfileIcon profile={profile} />
-                  <div className="text-left sm:text-right">
-                    <p className="text-xs sm:text-sm text-gray-400">Welcome back</p>
-                    <p className="font-medium text-sm sm:text-base">{profile.first_name}</p>
-                  </div>
-                </div>
-                <LogoutButton />
-              </div>
-            </div>
-          </div>
-        </header>
+    <Box
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Animated Background Elements */}
+      <Box
+        style={{
+          position: 'absolute',
+          top: '10%',
+          left: '10%',
+          width: '300px',
+          height: '300px',
+          background: 'radial-gradient(circle, rgba(255, 193, 68, 0.15) 0%, transparent 70%)',
+          borderRadius: '50%',
+          animation: 'float 6s ease-in-out infinite',
+          zIndex: 0,
+        }}
+      />
+      <Box
+        style={{
+          position: 'absolute',
+          top: '60%',
+          right: '15%',
+          width: '200px',
+          height: '200px',
+          background: 'radial-gradient(circle, rgba(255, 154, 0, 0.1) 0%, transparent 70%)',
+          borderRadius: '50%',
+          animation: 'float 8s ease-in-out infinite reverse',
+          zIndex: 0,
+        }}
+      />
+      <Box
+        style={{
+          position: 'absolute',
+          bottom: '20%',
+          left: '20%',
+          width: '150px',
+          height: '150px',
+          background: 'radial-gradient(circle, rgba(255, 193, 68, 0.08) 0%, transparent 70%)',
+          borderRadius: '50%',
+          animation: 'float 10s ease-in-out infinite',
+          zIndex: 0,
+        }}
+      />
 
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-          {/* Hero Section */}
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter mb-3 sm:mb-4">
-              <span className="bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 bg-clip-text text-transparent">
-                YOUR CLUB
-              </span>
-            </h2>
-            <p className="text-lg sm:text-xl text-gray-300 font-light">Ready to explore premium cigars?</p>
-          </div>
+      <Container size="xl" py="xl" style={{ position: 'relative', zIndex: 1 }}>
+        {/* Hero Section */}
+        <Stack gap="xl" mb="xl">
+          <Box ta="center" py={{ base: 'xl', md: '4rem' }}>
+            <Title
+              order={1}
+              size="4rem"
+              fw={800}
+              mb="lg"
+              style={{
+                background: 'linear-gradient(135deg, #ffc144 0%, #ff9a00 50%, #ffc144 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent',
+                letterSpacing: '-0.04em',
+                lineHeight: 1.1,
+                fontSize: 'clamp(2.5rem, 8vw, 4rem)',
+                textShadow: '0 0 40px rgba(255, 193, 68, 0.3)',
+              }}
+            >
+              Welcome to Puros
+            </Title>
+            <Text
+              size="xl"
+              style={{ 
+                color: 'rgba(255, 255, 255, 0.8)',
+                maxWidth: '600px',
+                margin: '0 auto',
+                lineHeight: 1.6,
+                fontSize: 'clamp(1.1rem, 3vw, 1.25rem)',
+              }}
+              visibleFrom="sm"
+            >
+              Discover, review, and share your passion for premium cigars with a community of enthusiasts
+            </Text>
+          </Box>
 
-          {/* Dashboard Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16">
-            {/* Reviews Card */}
-            <div className="group relative bg-gradient-to-br from-gray-900/50 to-gray-800/30 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 sm:p-8 hover:border-amber-500/50 transition-all duration-300 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative z-10">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl flex items-center justify-center mb-3 sm:mb-4">
-                  <span className="text-xl sm:text-2xl">⭐</span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-bold mb-2">Reviews</h3>
-                <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">Share your experiences</p>
-                <div className="text-amber-400 font-semibold text-sm sm:text-base">Coming Soon</div>
-              </div>
-            </div>
+          {/* Quick Stats */}
+          <Group justify="center" gap="xl" mb="xl">
+            <Stack align="center" gap="xs">
+              <Text
+                size="2rem"
+                fw={700}
+                style={{
+                  background: 'linear-gradient(135deg, #ffc144 0%, #ff9a00 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                }}
+              >
+                {totalReviews || 0}
+              </Text>
+              <Text size="sm" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                Reviews
+              </Text>
+            </Stack>
+            <Stack align="center" gap="xs">
+              <Text
+                size="2rem"
+                fw={700}
+                style={{
+                  background: 'linear-gradient(135deg, #ffc144 0%, #ff9a00 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                }}
+              >
+                {totalUsers || 0}
+              </Text>
+              <Text size="sm" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                Members
+              </Text>
+            </Stack>
+          </Group>
+        </Stack>
 
-            {/* Discover Card */}
-            <div className="group relative bg-gradient-to-br from-gray-900/50 to-gray-800/30 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 sm:p-8 hover:border-amber-500/50 transition-all duration-300 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative z-10">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl flex items-center justify-center mb-3 sm:mb-4">
-                  <span className="text-xl sm:text-2xl">🔍</span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-bold mb-2">Discover</h3>
-                <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">Find new favorites</p>
-                <div className="text-amber-400 font-semibold text-sm sm:text-base">Coming Soon</div>
-              </div>
-            </div>
+        {/* Dashboard Cards */}
+        <Grid mb="xl">
+          <GridCol span={{ base: 12, sm: 6, md: 3 }}>
+            <DashboardCard
+              href="/feed"
+              icon={<IconEye size={32} style={{ color: '#ffc144' }} />}
+              title="Browse Reviews"
+              description="Explore the latest cigar reviews from our community"
+              actionText="View Feed"
+            />
+          </GridCol>
+          <GridCol span={{ base: 12, sm: 6, md: 3 }}>
+            <DashboardCard
+              href="/review/new"
+              icon={<IconPlus size={32} style={{ color: '#ffc144' }} />}
+              title="Write Review"
+              description="Share your thoughts on your latest cigar experience"
+              actionText="New Review"
+            />
+          </GridCol>
+          <GridCol span={{ base: 12, sm: 6, md: 3 }}>
+            <DashboardCard
+              icon={<IconUsers size={32} style={{ color: 'rgba(255, 193, 68, 0.8)' }} />}
+              title="Community"
+              description="Connect with fellow cigar enthusiasts"
+              actionText="Coming Soon"
+              isComingSoon={true}
+            />
+          </GridCol>
+          <GridCol span={{ base: 12, sm: 6, md: 3 }}>
+            <DashboardCard
+              icon={<IconTrendingUp size={32} style={{ color: 'rgba(255, 193, 68, 0.8)' }} />}
+              title="Trending"
+              description="Discover the most popular cigars this month"
+              actionText="Coming Soon"
+              isComingSoon={true}
+            />
+          </GridCol>
+        </Grid>
 
-            {/* Community Card */}
-            <div className="group relative bg-gradient-to-br from-gray-900/50 to-gray-800/30 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 sm:p-8 hover:border-amber-500/50 transition-all duration-300 hover:scale-105 sm:col-span-2 lg:col-span-1">
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative z-10">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl flex items-center justify-center mb-3 sm:mb-4">
-                  <span className="text-xl sm:text-2xl">👥</span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-bold mb-2">Community</h3>
-                <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">Connect with others</p>
-                <div className="text-amber-400 font-semibold text-sm sm:text-base">Coming Soon</div>
-              </div>
-            </div>
-          </div>
+        {/* Recent Reviews */}
+        {recentReviews && recentReviews.length > 0 && (
+          <Stack gap="xl">
+            <Group justify="space-between" align="center">
+              <Title
+                order={2}
+                style={{
+                  background: 'linear-gradient(135deg, #ffc144 0%, #ff9a00 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                  fontSize: '2rem',
+                  fontWeight: 700,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                Recent Reviews
+              </Title>
+              <Link 
+                href="/feed" 
+                style={{ 
+                  color: '#ffc144', 
+                  textDecoration: 'none',
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                View All →
+              </Link>
+            </Group>
 
-          {/* CTA Section */}
-          <div className="text-center">
-            <div className="inline-block bg-gradient-to-r from-gray-900/50 to-gray-800/30 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 sm:p-8 w-full sm:w-auto">
-              <h3 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Ready to Begin?</h3>
-              <p className="text-gray-300 mb-6 sm:mb-8 max-w-md mx-auto text-sm sm:text-base">Your premium cigar journey starts here</p>
-              <button className="group relative w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full font-semibold text-black text-base sm:text-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/25">
-                <span className="relative z-10">Get Started</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </button>
-            </div>
-          </div>
-        </main>
+            <Grid>
+              {recentReviews.map((review) => (
+                <GridCol key={review.id} span={{ base: 12, sm: 6, lg: 3 }}>
+                  <InteractiveCard>
+                    <Stack gap="md">
+                      {/* Review Images */}
+                      {review.image_urls && review.image_urls.length > 0 && (
+                        <ImageCarousel 
+                          images={review.image_urls} 
+                          height={250}
+                          fullWidth={true}
+                        />
+                      )}
 
-        {/* Bottom accent */}
-        <div className="h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
-      </div>
-    </div>
+                      {/* Review Content */}
+                      <Stack gap="sm">
+                        <Group justify="space-between" align="flex-start">
+                          <Stack gap={4} style={{ flex: 1 }}>
+                            <Text 
+                              fw={600} 
+                              size="lg" 
+                              lineClamp={1}
+                              style={{ color: 'rgba(255, 255, 255, 0.95)' }}
+                            >
+                              {review.cigar_name}
+                            </Text>
+                            <Text 
+                              size="sm" 
+                              style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                            >
+                              {review.brand}
+                            </Text>
+                          </Stack>
+                          <Badge
+                            variant="light"
+                            color="orange"
+                            size="sm"
+                            leftSection={<IconStar size={12} />}
+                            style={{
+                              background: 'rgba(255, 193, 68, 0.15)',
+                              color: '#ffc144',
+                              border: '1px solid rgba(255, 193, 68, 0.3)',
+                            }}
+                          >
+                            {review.rating}
+                          </Badge>
+                        </Group>
+
+                        <Text 
+                          size="sm" 
+                          lineClamp={3}
+                          style={{ color: 'rgba(255, 255, 255, 0.8)' }}
+                        >
+                          {review.notes}
+                        </Text>
+
+                        {/* User Info */}
+                        <Group gap="sm" mt="sm">
+                          <Avatar
+                            src={review.profiles?.avatar_url}
+                            size="sm"
+                            radius="xl"
+                            style={{
+                              border: '2px solid rgba(255, 193, 68, 0.3)',
+                            }}
+                          />
+                          <Stack gap={2}>
+                            <Text 
+                              size="sm" 
+                              fw={500}
+                              style={{ color: 'rgba(255, 255, 255, 0.9)' }}
+                            >
+                              {review.profiles?.username}
+                            </Text>
+                            <Group gap="xs">
+                              <IconCalendar size={12} style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+                              <Text 
+                                size="xs" 
+                                style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+                              >
+                                {new Date(review.created_at).toLocaleDateString()}
+                              </Text>
+                            </Group>
+                          </Stack>
+                        </Group>
+
+                        {/* Social Actions */}
+                        <Group gap="lg" mt="sm" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '12px' }}>
+                          <Group gap="xs" style={{ cursor: 'pointer', color: 'rgba(255, 255, 255, 0.6)' }}>
+                            <IconHeart size={16} />
+                            <Text size="sm">0</Text>
+                          </Group>
+                          <Group gap="xs" style={{ cursor: 'pointer', color: 'rgba(255, 255, 255, 0.6)' }}>
+                            <IconMessageCircle size={16} />
+                            <Text size="sm">0</Text>
+                          </Group>
+                          <Group gap="xs" style={{ cursor: 'pointer', color: 'rgba(255, 255, 255, 0.6)' }}>
+                            <IconShare size={16} />
+                          </Group>
+                        </Group>
+                      </Stack>
+                    </Stack>
+                  </InteractiveCard>
+                </GridCol>
+              ))}
+            </Grid>
+          </Stack>
+        )}
+
+        {/* CTA Section */}
+        <Box
+          ta="center"
+          py="4rem"
+          mt="4rem"
+          style={{
+            background: 'rgba(255, 193, 68, 0.05)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 193, 68, 0.2)',
+            borderRadius: '24px',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <Box
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '200px',
+              height: '200px',
+              background: 'radial-gradient(circle, rgba(255, 193, 68, 0.1) 0%, transparent 70%)',
+              borderRadius: '50%',
+              zIndex: 0,
+            }}
+          />
+          <Stack gap="lg" style={{ position: 'relative', zIndex: 1 }}>
+            <Title
+              order={2}
+              size="2.5rem"
+              fw={700}
+              style={{
+                background: 'linear-gradient(135deg, #ffc144 0%, #ff9a00 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Ready to Share Your Experience?
+            </Title>
+            <Text
+              size="lg"
+              style={{ 
+                color: 'rgba(255, 255, 255, 0.8)',
+                maxWidth: '500px',
+                margin: '0 auto',
+              }}
+            >
+              Join our community and start reviewing your favorite cigars today
+            </Text>
+            <Group justify="center" gap="md" mt="lg">
+              <Link href="/review/new" style={{ textDecoration: 'none' }}>
+                <Box
+                  component="button"
+                  style={{
+                    background: 'linear-gradient(135deg, #ffc144 0%, #ff9a00 100%)',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '16px 32px',
+                    color: '#000',
+                    fontSize: '1.1rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 8px 25px rgba(255, 193, 68, 0.3)',
+                  }}
+                  className="button-hover"
+                >
+                  Write Your First Review
+                </Box>
+              </Link>
+              <Link href="/feed" style={{ textDecoration: 'none' }}>
+                <Box
+                  component="button"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '2px solid rgba(255, 193, 68, 0.5)',
+                    borderRadius: '12px',
+                    padding: '14px 30px',
+                    color: '#ffc144',
+                    fontSize: '1.1rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    backdropFilter: 'blur(10px)',
+                  }}
+                  className="button-hover-secondary"
+                >
+                  Explore Reviews
+                </Box>
+              </Link>
+            </Group>
+          </Stack>
+        </Box>
+      </Container>
+    </Box>
   );
 }
