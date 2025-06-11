@@ -1,41 +1,45 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
-  Container,
   Paper,
   Title,
   Button,
   Group,
   Stack,
-  Grid,
   Select,
-  TextInput,
   Text,
   Avatar,
   ActionIcon,
   Loader,
   Center,
   Box,
-  Divider,
-  Card
+  Card,
+  Badge,
+  TextInput,
+  Menu
 } from '@mantine/core';
 import { 
-  IconArrowLeft, 
   IconEdit, 
   IconTrash, 
-  IconSearch,
+  IconPlus,
   IconStar,
-  IconDotsVertical
+  IconDotsVertical,
+  IconFilter,
+  IconChevronLeft,
+  IconChevronRight,
+  IconChevronsLeft,
+  IconChevronsRight,
+  IconSearch,
+  IconArrowLeft
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { modals } from '@mantine/modals';
 import StarRating from './StarRating';
 import ReviewForm from './ReviewForm';
-import ImageCarousel from './ImageCarousel';
+import OptimizedImageCarousel from './OptimizedImageCarousel';
 import SocialActions from './SocialActions';
 
 interface Review {
@@ -65,6 +69,9 @@ interface Filters {
 export default function FeedTimeline() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [saving, setSaving] = useState(false);
@@ -74,6 +81,13 @@ export default function FeedTimeline() {
     cigarName: '',
     sortBy: 'newest'
   });
+  const [pendingFilters, setPendingFilters] = useState<Filters>({
+    rating: '',
+    dateRange: '',
+    cigarName: '',
+    sortBy: 'newest'
+  });
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [user, setUser] = useState<{ id: string } | null>(null);
   
   const supabase = createClient();
@@ -93,19 +107,65 @@ export default function FeedTimeline() {
 
   useEffect(() => {
     if (user) {
-      fetchReviews();
+      // Reset pagination when filters or page size change
+      setCurrentPage(1);
     }
-  }, [user, filters]);
+  }, [user, filters, pageSize]);
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     setLoading(true);
     
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize - 1;
+    
+    // First, get the total count for pagination
+    let countQuery = supabase
+      .from('reviews')
+      .select('id', { count: 'exact', head: true });
+
+    // Apply the same filters to count query
+    if (filters.rating) {
+      const ratingNum = parseFloat(filters.rating);
+      countQuery = countQuery.gte('rating', ratingNum).lt('rating', ratingNum + 1);
+    }
+
+    if (filters.cigarName) {
+      countQuery = countQuery.ilike('cigar_name', `%${filters.cigarName}%`);
+    }
+
+    if (filters.dateRange) {
+      const today = new Date();
+      const startDate = new Date();
+      
+      switch (filters.dateRange) {
+        case 'week':
+          startDate.setDate(today.getDate() - 7);
+          break;
+        case 'month':
+          startDate.setMonth(today.getMonth() - 1);
+          break;
+        case 'year':
+          startDate.setFullYear(today.getFullYear() - 1);
+          break;
+      }
+      
+      if (filters.dateRange !== '') {
+        countQuery = countQuery.gte('review_date', startDate.toISOString().split('T')[0]);
+      }
+    }
+
+    // Get total count
+    const { count } = await countQuery;
+    setTotalCount(count || 0);
+    
+    // Now get the actual data
     let query = supabase
       .from('reviews')
       .select(`
         *,
         profiles!inner(first_name, last_name, avatar_url)
-      `);
+      `)
+      .range(from, to);
 
     // Apply filters
     if (filters.rating) {
@@ -138,22 +198,22 @@ export default function FeedTimeline() {
       }
     }
 
-    // Apply sorting
+    // Apply sorting - swapped logic per user request
     switch (filters.sortBy) {
       case 'oldest':
-        query = query.order('created_at', { ascending: true });
+        query = query.order('created_at', { ascending: false }); // oldest first - swapped to descending
         break;
       case 'rating_high':
-        query = query.order('rating', { ascending: false });
+        query = query.order('rating', { ascending: false }).order('created_at', { ascending: false });
         break;
       case 'rating_low':
-        query = query.order('rating', { ascending: true });
+        query = query.order('rating', { ascending: true }).order('created_at', { ascending: false });
         break;
       case 'cigar_name':
-        query = query.order('cigar_name', { ascending: true });
+        query = query.order('cigar_name', { ascending: true }).order('created_at', { ascending: false });
         break;
-      default:
-        query = query.order('created_at', { ascending: false });
+      default: // 'newest'
+        query = query.order('created_at', { ascending: true }); // newest first - swapped to ascending
     }
 
     const { data, error } = await query;
@@ -165,12 +225,19 @@ export default function FeedTimeline() {
         message: 'Failed to load reviews',
         color: 'red',
       });
+      setReviews([]);
     } else {
       setReviews(data || []);
     }
     
     setLoading(false);
-  };
+  }, [supabase, filters, currentPage, pageSize]);
+
+  useEffect(() => {
+    if (user) {
+      fetchReviews();
+    }
+  }, [user, currentPage, fetchReviews]);
 
   const handleSaveReview = async (reviewData: { id?: string; cigar_name: string; rating: number; notes: string; review_date: string; images?: string[] }) => {
     setSaving(true);
@@ -221,6 +288,8 @@ export default function FeedTimeline() {
       
       setShowForm(false);
       setEditingReview(null);
+      // Reset pagination and refetch
+      setCurrentPage(1);
       fetchReviews();
     } catch (error) {
       console.error('Error saving review:', error);
@@ -267,6 +336,8 @@ export default function FeedTimeline() {
             message: 'Review deleted successfully',
             color: 'green',
           });
+          // Reset pagination and refetch
+          setCurrentPage(1);
           fetchReviews();
         }
       },
@@ -296,22 +367,70 @@ export default function FeedTimeline() {
     return formatDate(dateString);
   };
 
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (filters.rating && filters.rating.trim()) count++;
+    if (filters.dateRange && filters.dateRange.trim()) count++;
+    if (filters.cigarName && filters.cigarName.trim()) count++;
+    if (filters.sortBy && filters.sortBy !== 'newest') count++;
+    console.log('Active filters:', { filters, count }); // Debug log
+    return count;
+  };
+
+
+
   if (showForm) {
     return (
       <Box 
         style={{ 
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, rgba(18, 18, 23, 0.95) 0%, rgba(30, 30, 40, 0.9) 100%)',
+          background: 'rgb(18, 18, 23)',
+          paddingTop: '70px',
         }}
       >
-        <Container size="md" py="xl">
-          <Paper shadow="xl" p="xl" radius="lg" mb="xl">
-            <Group justify="space-between" align="center" mb="lg">
-              <Title order={1} c="brand.3">
+        <Box
+          px={{ base: 0, sm: 'md' }}
+          py={{ base: 0, sm: 'md' }}
+          style={{ 
+            position: 'relative', 
+            maxWidth: '600px', 
+            margin: '0 auto',
+            overflow: 'visible',
+          }}
+          w={{ base: '100%', sm: 'auto' }}
+          maw={{ base: '100%', sm: '600px' }}
+        >
+          {/* Header */}
+          <Group justify="space-between" align="center" mb="lg" px={{ base: 'md', sm: 0 }} pt="lg">
+            <Group gap="md">
+              <ActionIcon
+                variant="subtle"
+                size="lg"
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingReview(null);
+                }}
+                style={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  }
+                }}
+              >
+                <IconArrowLeft size={20} />
+              </ActionIcon>
+              <Title
+                order={1}
+                style={{
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  fontSize: '2rem',
+                  fontWeight: 600,
+                }}
+              >
                 {editingReview ? 'Edit Review' : 'New Review'}
               </Title>
             </Group>
-          </Paper>
+          </Group>
 
           <ReviewForm
             review={editingReview ? {
@@ -329,283 +448,319 @@ export default function FeedTimeline() {
             }}
             isLoading={saving}
           />
-        </Container>
+          
+          {/* Bottom spacing */}
+          <Box h="4rem" />
+        </Box>
       </Box>
     );
   }
 
   return (
-    <Box 
-      style={{ 
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Animated Background Elements */}
-      <Box
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: `
-            radial-gradient(circle at 20% 20%, rgba(255, 193, 68, 0.06) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(255, 154, 0, 0.04) 0%, transparent 50%),
-            radial-gradient(circle at 50% 50%, rgba(255, 193, 68, 0.03) 0%, transparent 40%)
-          `,
-        }}
-      />
+    <>
+      <style>{`
+        @media (max-width: 768px) {
+          .mobile-no-radius {
+            border-radius: 0 !important;
+          }
+        }
+        
+        /* Disable all Mantine Select dropdown animations */
+        [data-mantine-component="Combobox"] [data-mantine-component="ComboboxDropdown"] {
+          animation: none !important;
+          transform: none !important;
+          transition: none !important;
+        }
+        
+        [data-floating-ui-portal] {
+          animation: none !important;
+          transform: none !important;
+          transition: none !important;
+        }
+        
+        .mantine-Select-dropdown {
+          animation: none !important;
+          transform: none !important;
+          transition: none !important;
+        }
+        
+        /* Ensure Menu dropdowns appear correctly */
+        [data-mantine-portal] {
+          z-index: 10000 !important;
+        }
+        
+        .mantine-Menu-dropdown {
+          z-index: 10000 !important;
+        }
+      `}</style>
+      
 
-      {/* Floating Orbs */}
-      <Box
-        style={{
-          position: 'absolute',
-          top: '10%',
-          right: '15%',
-          width: '350px',
-          height: '350px',
-          background: 'radial-gradient(circle, rgba(255, 193, 68, 0.06) 0%, transparent 70%)',
-          borderRadius: '50%',
-          filter: 'blur(50px)',
-          animation: 'float 8s ease-in-out infinite',
+      
+      <Box 
+        p={{ base: 0, sm: 'md' }}
+        style={{ 
+          minHeight: 'calc(100vh - 70px)',
+          background: 'rgb(18, 18, 23)',
+          position: 'relative',
+          paddingTop: '70px',
         }}
-      />
-      <Box
-        style={{
-          position: 'absolute',
-          bottom: '20%',
-          left: '10%',
-          width: '250px',
-          height: '250px',
-          background: 'radial-gradient(circle, rgba(255, 154, 0, 0.04) 0%, transparent 70%)',
-          borderRadius: '50%',
-          filter: 'blur(40px)',
-          animation: 'float 10s ease-in-out infinite reverse',
-        }}
-      />
+      >
 
-      <Container size="md" py="xl" style={{ position: 'relative', zIndex: 10 }}>
-        {/* Header */}
-        <Paper 
-          shadow="0 20px 40px rgba(0, 0, 0, 0.3)" 
-          p={{ base: 'lg', sm: 'xl' }} 
-          radius="xl" 
-          mb="xl"
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-          }}
-        >
-          <Group justify="space-between" align="center">
-            <Group align="center" gap="lg">
-              <ActionIcon
-                variant="subtle"
-                component={Link}
-                href="/home"
-                size="xl"
-                radius="xl"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 193, 68, 0.2)';
-                  e.currentTarget.style.color = '#ffc144';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
-                }}
-              >
-                <IconArrowLeft size={22} />
-              </ActionIcon>
-              <Title 
-                order={1} 
-                style={{
-                  background: 'linear-gradient(135deg, #ffffff 0%, #ffc144 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  fontSize: '2rem',
-                  fontWeight: 700,
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                Feed
-              </Title>
+
+      <Box
+        px={{ base: 0, sm: 'md' }}
+        py={{ base: 0, sm: 'md' }}
+        style={{ 
+          position: 'relative', 
+          maxWidth: '600px', 
+          margin: '0 auto',
+          overflow: 'visible',
+        }}
+        w={{ base: '100%', sm: 'auto' }}
+        maw={{ base: '100%', sm: '600px' }}
+      >
+
+        {/* Filter Button and Active Filters */}
+        <Group justify="space-between" align="center" wrap="wrap" gap="md" mt="lg" mb="lg" px={{ base: 'md', sm: 0 }}>
+          <Button
+            leftSection={<IconFilter size={18} />}
+            onClick={() => {
+              setPendingFilters(filters); // Initialize pending filters with current filters
+              setFilterModalOpen(!filterModalOpen);
+            }}
+            variant="subtle"
+            radius="xl"
+            style={{
+              color: 'rgba(255, 255, 255, 0.8)',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+            }}
+          >
+            <Group gap="xs" wrap="nowrap">
+              <Text>Filters</Text>
+              {getActiveFiltersCount() > 0 && (
+                <Badge
+                  size="xs"
+                  style={{
+                    backgroundColor: '#ffc144',
+                    color: '#000',
+                    minWidth: '18px',
+                    height: '18px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                  }}
+                >
+                  {getActiveFiltersCount()}
+                </Badge>
+              )}
             </Group>
-            
-            <Button
-              leftSection={<IconStar size={18} />}
-              onClick={() => setShowForm(true)}
-              size="lg"
-              radius="xl"
-              style={{
-                background: 'linear-gradient(135deg, #ffc144 0%, #ff9a00 100%)',
-                border: 'none',
-                fontWeight: 600,
-                fontSize: '1rem',
-                boxShadow: '0 8px 25px rgba(255, 193, 68, 0.3)',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 12px 35px rgba(255, 193, 68, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 8px 25px rgba(255, 193, 68, 0.3)';
-              }}
-            >
-              <Text visibleFrom="sm">New Review</Text>
-              <Text hiddenFrom="sm">New</Text>
-            </Button>
-          </Group>
-        </Paper>
+          </Button>
 
-        {/* Filters */}
-        <Paper 
-          shadow="0 15px 30px rgba(0, 0, 0, 0.2)" 
-          p={{ base: 'lg', sm: 'xl' }} 
-          radius="xl" 
-          mb="xl"
-          style={{
-            background: 'rgba(255, 255, 255, 0.04)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          }}
-        >
-          <Grid>
-            <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-              <Select
-                label="Rating"
-                placeholder="All Ratings"
-                value={filters.rating}
-                onChange={(value) => setFilters({ ...filters, rating: value || '' })}
-                data={[
-                  { value: '', label: 'All Ratings' },
-                  { value: '4', label: '4+ Stars' },
-                  { value: '3', label: '3+ Stars' },
-                  { value: '2', label: '2+ Stars' },
-                  { value: '1', label: '1+ Stars' },
-                ]}
-                radius="lg"
-                styles={{
-                  label: {
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    fontWeight: 500,
-                    marginBottom: '0.5rem',
-                  },
-                  input: {
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    '&:focus': {
-                      borderColor: 'rgba(255, 193, 68, 0.6)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                    }
-                  }
-                }}
-              />
-            </Grid.Col>
+          <Button
+            leftSection={<IconPlus size={18} />}
+            onClick={() => setShowForm(true)}
+            radius="xl"
+            style={{
+              backgroundColor: '#fff',
+              border: 'none',
+              fontWeight: 600,
+              color: '#000',
+            }}
+          >
+            <Text visibleFrom="sm">New Review</Text>
+            <Text hiddenFrom="sm">New</Text>
+          </Button>
+        </Group>
 
-            <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-              <Select
-                label="Date Range"
-                placeholder="All Time"
-                value={filters.dateRange}
-                onChange={(value) => setFilters({ ...filters, dateRange: value || '' })}
-                data={[
-                  { value: '', label: 'All Time' },
-                  { value: 'week', label: 'Last Week' },
-                  { value: 'month', label: 'Last Month' },
-                  { value: 'year', label: 'Last Year' },
-                ]}
-                radius="lg"
-                styles={{
-                  label: {
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    fontWeight: 500,
-                    marginBottom: '0.5rem',
-                  },
-                  input: {
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    '&:focus': {
-                      borderColor: 'rgba(255, 193, 68, 0.6)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                    }
-                  }
-                }}
-              />
-            </Grid.Col>
-
-            <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-              <TextInput
-                label="Search Cigar"
-                placeholder="Search cigar name..."
-                leftSection={<IconSearch size={18} style={{ color: 'rgba(255, 193, 68, 0.7)' }} />}
-                value={filters.cigarName}
-                onChange={(e) => setFilters({ ...filters, cigarName: e.target.value })}
-                radius="lg"
-                styles={{
-                  label: {
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    fontWeight: 500,
-                    marginBottom: '0.5rem',
-                  },
-                  input: {
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    paddingLeft: '3rem',
-                    '&:focus': {
-                      borderColor: 'rgba(255, 193, 68, 0.6)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+        {/* Filter Panel */}
+        {filterModalOpen && (
+          <Paper
+            p="md"
+            mb="lg"
+            mx={{ base: 'md', sm: 0 }}
+            radius="lg"
+            style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              position: 'relative',
+              zIndex: 100,
+              pointerEvents: 'auto',
+            }}
+          >
+            <Stack gap="md">
+              {/* Rating Filter */}
+              <div>
+                <Text size="sm" fw={500} mb="xs" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>Rating</Text>
+                <Select
+                  placeholder="All Ratings"
+                  value={pendingFilters.rating}
+                  onChange={(value) => setPendingFilters(prev => ({ ...prev, rating: value || '' }))}
+                  data={[
+                    { value: '', label: 'All Ratings' },
+                    { value: '4', label: '4+ Stars' },
+                    { value: '3', label: '3+ Stars' },
+                    { value: '2', label: '2+ Stars' },
+                    { value: '1', label: '1+ Stars' },
+                  ]}
+                  clearable
+                  styles={{
+                    input: {
+                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      position: 'relative',
+                      zIndex: 1,
+                      pointerEvents: 'auto',
                     },
-                    '&::placeholder': {
-                      color: 'rgba(255, 255, 255, 0.4)',
+                    dropdown: {
+                      backgroundColor: 'rgba(30, 30, 40, 0.95)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      zIndex: 1000,
+                      animation: 'none !important',
+                      transform: 'none !important',
+                      transition: 'none !important',
                     }
-                  }
-                }}
-              />
-            </Grid.Col>
+                  }}
+                />
+              </div>
 
-            <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-              <Select
-                label="Sort By"
-                value={filters.sortBy}
-                onChange={(value) => setFilters({ ...filters, sortBy: value || 'newest' })}
-                data={[
-                  { value: 'newest', label: 'Newest First' },
-                  { value: 'oldest', label: 'Oldest First' },
-                  { value: 'rating_high', label: 'Highest Rated' },
-                  { value: 'rating_low', label: 'Lowest Rated' },
-                  { value: 'cigar_name', label: 'Cigar Name' },
-                ]}
-                radius="lg"
-                styles={{
-                  label: {
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    fontWeight: 500,
-                    marginBottom: '0.5rem',
-                  },
-                  input: {
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    '&:focus': {
-                      borderColor: 'rgba(255, 193, 68, 0.6)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+              {/* Date Range Filter */}
+              <div>
+                <Text size="sm" fw={500} mb="xs" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>Date Range</Text>
+                <Select
+                  placeholder="All Time"
+                  value={pendingFilters.dateRange}
+                  onChange={(value) => setPendingFilters(prev => ({ ...prev, dateRange: value || '' }))}
+                  data={[
+                    { value: '', label: 'All Time' },
+                    { value: 'week', label: 'Last Week' },
+                    { value: 'month', label: 'Last Month' },
+                    { value: 'year', label: 'Last Year' },
+                  ]}
+                  clearable
+                  styles={{
+                    input: {
+                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      position: 'relative',
+                      zIndex: 1,
+                      pointerEvents: 'auto',
+                    },
+                    dropdown: {
+                      backgroundColor: 'rgba(30, 30, 40, 0.95)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      zIndex: 1000,
+                      animation: 'none !important',
+                      transform: 'none !important',
+                      transition: 'none !important',
                     }
-                  }
-                }}
-              />
-            </Grid.Col>
-          </Grid>
-        </Paper>
+                  }}
+                />
+              </div>
+
+              {/* Cigar Name Search */}
+              <div>
+                <Text size="sm" fw={500} mb="xs" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>Search Cigar</Text>
+                <TextInput
+                  placeholder="Type cigar name..."
+                  value={pendingFilters.cigarName}
+                  onChange={(e) => setPendingFilters(prev => ({ ...prev, cigarName: e.target.value }))}
+                  leftSection={<IconSearch size={16} style={{ color: 'rgba(255, 255, 255, 0.6)' }} />}
+                  styles={{
+                    input: {
+                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      position: 'relative',
+                      zIndex: 1,
+                      pointerEvents: 'auto',
+                      '&::placeholder': {
+                        color: 'rgba(255, 255, 255, 0.5)',
+                      }
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Sort By */}
+              <div>
+                <Text size="sm" fw={500} mb="xs" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>Sort By</Text>
+                <Select
+                  value={pendingFilters.sortBy}
+                  onChange={(value) => setPendingFilters(prev => ({ ...prev, sortBy: value || 'newest' }))}
+                  data={[
+                    { value: 'newest', label: 'Newest First' },
+                    { value: 'oldest', label: 'Oldest First' },
+                    { value: 'rating_high', label: 'Highest Rated' },
+                    { value: 'rating_low', label: 'Lowest Rated' },
+                    { value: 'cigar_name', label: 'Cigar Name' },
+                  ]}
+                  styles={{
+                    input: {
+                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      position: 'relative',
+                      zIndex: 1,
+                      pointerEvents: 'auto',
+                    },
+                    dropdown: {
+                      backgroundColor: 'rgba(30, 30, 40, 0.95)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      zIndex: 1000,
+                      animation: 'none !important',
+                      transform: 'none !important',
+                      transition: 'none !important',
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <Group justify="space-between" mt="sm">
+                <Button
+                  variant="subtle"
+                  size="sm"
+                  onClick={() => {
+                    setPendingFilters({
+                      rating: '',
+                      dateRange: '',
+                      cigarName: '',
+                      sortBy: 'newest'
+                    });
+                  }}
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  Clear All
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setFilters(pendingFilters); // Apply the pending filters
+                    setFilterModalOpen(false);
+                  }}
+                  style={{
+                    backgroundColor: '#fff',
+                    color: '#000',
+                    fontWeight: 600,
+                  }}
+                >
+                  Apply
+                </Button>
+              </Group>
+            </Stack>
+          </Paper>
+        )}
+
+
+
+
 
         {/* Feed */}
         {loading ? (
@@ -634,6 +789,7 @@ export default function FeedTimeline() {
           <Paper 
             shadow="0 20px 40px rgba(0, 0, 0, 0.2)" 
             p="3rem" 
+            mx={{ base: 'md', sm: 0 }}
             radius="xl"
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
@@ -689,21 +845,12 @@ export default function FeedTimeline() {
                   size="lg"
                   radius="xl"
                   style={{
-                    background: 'linear-gradient(135deg, #ffc144 0%, #ff9a00 100%)',
+                    backgroundColor: '#fff',
                     border: 'none',
                     fontWeight: 600,
                     fontSize: '1.1rem',
+                    color: '#000',
                     padding: '1rem 2rem',
-                    boxShadow: '0 8px 25px rgba(255, 193, 68, 0.3)',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 12px 35px rgba(255, 193, 68, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(255, 193, 68, 0.3)';
                   }}
                 >
                   Write the first review
@@ -712,122 +859,292 @@ export default function FeedTimeline() {
             </Center>
           </Paper>
         ) : (
-          <Stack gap="xl">
+          <Stack 
+            gap="lg"
+          >
             {reviews.map((review) => (
               <Card
                 key={review.id}
-                shadow="0 20px 40px rgba(0, 0, 0, 0.25)"
-                padding="xl"
-                radius="xl"
-                className="card-hover"
+                padding={0}
+                radius="lg"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  transition: 'all 0.3s ease',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  position: 'relative',
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 25px 50px rgba(0, 0, 0, 0.3)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 193, 68, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.25)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                }}
+                className="mobile-no-radius"
               >
                 {/* Post Header */}
-                <Group justify="space-between" mb="md">
-                  <Group>
-                    <Avatar
-                      src={review.profiles.avatar_url}
-                      size="md"
-                      radius="xl"
-                      color="brand"
-                    >
-                      {getInitials(review.profiles.first_name, review.profiles.last_name)}
-                    </Avatar>
-                    <Stack gap={2}>
-                      <Text fw={600} size="sm">
-                        {review.profiles.first_name} {review.profiles.last_name}
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        {getTimeAgo(review.created_at)}
-                      </Text>
-                    </Stack>
-                  </Group>
-                  
-                  {review.user_id === user?.id ? (
-                    <Group gap="xs">
-                      <ActionIcon
-                        variant="subtle"
+                <Box px={{ base: 'md', sm: 'md' }} py="md">
+                  <Group justify="space-between" align="center">
+                    <Group>
+                      <Avatar
+                        src={review.profiles.avatar_url}
+                        size="md"
+                        radius="xl"
                         color="brand"
-                        onClick={() => handleEditReview(review)}
                       >
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                      <ActionIcon
-                        variant="subtle"
-                        color="red"
-                        onClick={() => handleDeleteReview(review.id)}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
+                        {getInitials(review.profiles.first_name, review.profiles.last_name)}
+                      </Avatar>
+                      <Stack gap={2}>
+                        <Text fw={600} size="sm" style={{ color: '#fff' }}>
+                          {review.profiles.first_name} {review.profiles.last_name}
+                        </Text>
+                        <Text size="xs" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                          {getTimeAgo(review.created_at)}
+                        </Text>
+                      </Stack>
                     </Group>
-                  ) : (
-                    <ActionIcon variant="subtle" color="gray">
-                      <IconDotsVertical size={16} />
-                    </ActionIcon>
-                  )}
-                </Group>
+                    
+                    {review.user_id === user?.id && (
+                      <Menu shadow="md" width={200} withinPortal>
+                        <Menu.Target>
+                          <ActionIcon variant="subtle" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                            <IconDotsVertical size={16} />
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown 
+                          style={{
+                            backgroundColor: 'rgba(30, 30, 40, 0.95)',
+                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            backdropFilter: 'blur(10px)',
+                            zIndex: 10000,
+                          }}
+                        >
+                          <Menu.Item
+                            leftSection={<IconEdit size={16} />}
+                            onClick={() => handleEditReview(review)}
+                            style={{ color: 'rgba(255, 255, 255, 0.9)' }}
+                          >
+                            Edit Post
+                          </Menu.Item>
+                          <Menu.Item
+                            leftSection={<IconTrash size={16} />}
+                            onClick={() => handleDeleteReview(review.id)}
+                            style={{ color: 'rgba(255, 100, 100, 0.9)' }}
+                          >
+                            Delete Post
+                          </Menu.Item>
+                        </Menu.Dropdown>
+                      </Menu>
+                    )}
+                  </Group>
+                </Box>
 
                 {/* Images */}
                 {review.images && review.images.length > 0 && (
-                  <Box mb="md">
-                    <ImageCarousel 
-                      images={review.images} 
-                      height={400}
-                      radius="md"
-                      fullWidth={true}
-                    />
-                  </Box>
+                  <OptimizedImageCarousel 
+                    images={review.images} 
+                    height={400}
+                    radius="0"
+                    fullWidth={true}
+                  />
                 )}
 
                 {/* Content */}
-                <Stack gap="sm" mb="md">
-                  <Group justify="space-between" align="center">
-                    <Title order={4} c="brand.3">
-                      {review.cigar_name}
-                    </Title>
-                    <StarRating rating={review.rating} readonly size={18} />
-                  </Group>
-                  
-                  {review.notes && (
-                    <Text size="sm" style={{ lineHeight: 1.6 }}>
-                      {review.notes}
-                    </Text>
-                  )}
-                </Stack>
-
-                <Divider my="sm" />
+                <Box px={{ base: 'md', sm: 'md' }} py="md">
+                  <Stack gap="sm">
+                    <Group justify="space-between" align="center">
+                      <Title order={4} style={{ color: '#fff', fontSize: '1.1rem' }}>
+                        {review.cigar_name}
+                      </Title>
+                      <StarRating rating={review.rating} readonly size={18} />
+                    </Group>
+                    
+                    {review.notes && (
+                      <Text size="sm" style={{ lineHeight: 1.6, color: 'rgba(255, 255, 255, 0.9)' }}>
+                        {review.notes}
+                      </Text>
+                    )}
+                  </Stack>
+                </Box>
 
                 {/* Actions */}
-                <Group justify="space-between" align="center">
-                  <SocialActions 
-                    reviewId={review.id}
-                    userId={user?.id || null}
-                    showInlineComments={true}
-                  />
-                  <Text size="xs" c="dimmed">
-                    {formatDate(review.review_date)}
-                  </Text>
-                </Group>
+                <Box px={{ base: 'md', sm: 'md' }} pb="md">
+                  <Group justify="space-between" align="center">
+                    <SocialActions 
+                      reviewId={review.id}
+                      userId={user?.id || null}
+                      showInlineComments={true}
+                    />
+                    <Text size="xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                      {formatDate(review.review_date)}
+                    </Text>
+                  </Group>
+                </Box>
               </Card>
             ))}
+            
+            {/* Pagination Controls */}
+            {totalCount > pageSize && (
+              <Box 
+                p="lg" 
+                mx={{ base: 'md', sm: 0 }}
+                mt="xl"
+                mb="xl"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                }}
+                className="mobile-no-radius"
+              >
+                <Stack gap="md" align="center">
+                  {/* Page Size Selector */}
+                  <Group gap="md" justify="center">
+                    <Text size="sm" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                      Show:
+                    </Text>
+                    <Select
+                      value={pageSize.toString()}
+                      onChange={(value) => {
+                        setPageSize(parseInt(value || '10'));
+                        setCurrentPage(1);
+                      }}
+                      data={[
+                        { value: '5', label: '5 per page' },
+                        { value: '10', label: '10 per page' },
+                        { value: '20', label: '20 per page' },
+                        { value: '50', label: '50 per page' },
+                      ]}
+                      size="sm"
+                      radius="lg"
+                      w={140}
+                      styles={{
+                        input: {
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontSize: '14px',
+                          '&:focus': {
+                            borderColor: 'rgba(255, 193, 68, 0.5)',
+                          }
+                        },
+                        dropdown: {
+                          backgroundColor: 'rgba(18, 18, 23, 0.95)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          backdropFilter: 'blur(20px)',
+                        },
+                        option: {
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          '&[data-selected]': {
+                            backgroundColor: 'rgba(255, 193, 68, 0.2)',
+                          },
+                          '&:hover': {
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          }
+                        }
+                      }}
+                    />
+                  </Group>
+
+                  {/* Pagination Info */}
+                  <Text size="sm" ta="center" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                    {totalCount === 0 ? 'No reviews' : 
+                     `Showing ${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, totalCount)} of ${totalCount} reviews`}
+                  </Text>
+                  
+                  {/* Pagination Controls */}
+                  <Group gap="sm" justify="center">
+                    <ActionIcon
+                      variant="subtle"
+                      size="lg"
+                      radius="lg"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(1)}
+                      style={{
+                        color: currentPage === 1 ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+                        backgroundColor: currentPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        '&:hover': {
+                          backgroundColor: currentPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.15)',
+                        }
+                      }}
+                    >
+                      <IconChevronsLeft size={18} />
+                    </ActionIcon>
+                    
+                    <ActionIcon
+                      variant="subtle"
+                      size="lg"
+                      radius="lg"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      style={{
+                        color: currentPage === 1 ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+                        backgroundColor: currentPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        '&:hover': {
+                          backgroundColor: currentPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.15)',
+                        }
+                      }}
+                    >
+                      <IconChevronLeft size={18} />
+                    </ActionIcon>
+                    
+                    <Box
+                      px="lg"
+                      py="sm"
+                      style={{
+                        backgroundColor: 'rgba(255, 193, 68, 0.15)',
+                        border: '1px solid rgba(255, 193, 68, 0.3)',
+                        borderRadius: '8px',
+                        minWidth: '120px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Text size="sm" fw={500} style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                        Page {currentPage} of {Math.ceil(totalCount / pageSize)}
+                      </Text>
+                    </Box>
+                    
+                    <ActionIcon
+                      variant="subtle"
+                      size="lg"
+                      radius="lg"
+                      disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalCount / pageSize), prev + 1))}
+                      style={{
+                        color: currentPage >= Math.ceil(totalCount / pageSize) ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+                        backgroundColor: currentPage >= Math.ceil(totalCount / pageSize) ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        '&:hover': {
+                          backgroundColor: currentPage >= Math.ceil(totalCount / pageSize) ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.15)',
+                        }
+                      }}
+                    >
+                      <IconChevronRight size={18} />
+                    </ActionIcon>
+                    
+                    <ActionIcon
+                      variant="subtle"
+                      size="lg"
+                      radius="lg"
+                      disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+                      onClick={() => setCurrentPage(Math.ceil(totalCount / pageSize))}
+                      style={{
+                        color: currentPage >= Math.ceil(totalCount / pageSize) ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+                        backgroundColor: currentPage >= Math.ceil(totalCount / pageSize) ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        '&:hover': {
+                          backgroundColor: currentPage >= Math.ceil(totalCount / pageSize) ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.15)',
+                        }
+                      }}
+                    >
+                      <IconChevronsRight size={18} />
+                    </ActionIcon>
+                  </Group>
+                </Stack>
+              </Box>
+            )}
           </Stack>
         )}
-      </Container>
+      </Box>
+      
+      {/* Bottom spacing */}
+      <Box pb="4xl" />
     </Box>
+    </>
   );
 } 

@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import {
   Container,
-  Title,
   Text,
   Button,
   Stack,
@@ -9,45 +8,39 @@ import {
   Box,
   Center
 } from '@mantine/core';
-import { IconArrowRight, IconUsers } from '@tabler/icons-react';
+import { IconStar } from '@tabler/icons-react';
 
 export default function LandingPage() {
   return (
     <Box
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, rgba(18, 18, 23, 0.95) 0%, rgba(30, 30, 40, 0.9) 100%)',
+        background: 'rgb(18, 18, 23)',
         overflow: 'hidden',
         position: 'relative',
       }}
     >
-      {/* Background Effects */}
-      <Box
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(circle at 25% 25%, rgba(255, 193, 68, 0.15) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(255, 154, 0, 0.1) 0%, transparent 50%)',
-        }}
-      />
-
-      <Container size="xl" style={{ position: 'relative', zIndex: 10, minHeight: '100vh' }}>
+      <Container size="md" style={{ position: 'relative', zIndex: 10, minHeight: '100vh' }}>
         {/* Header */}
         <Group justify="space-between" align="center" py="lg">
-          <Title
-            order={1}
-            size="h3"
-            c="brand.6"
-            style={{ fontWeight: 700, letterSpacing: '-0.02em' }}
-          >
-            Puros
-          </Title>
+          <img
+            src="/images/puros-white.png"
+            alt="Puros"
+            style={{
+              height: '32px',
+              width: 'auto',
+            }}
+          />
           
           <Group>
             <Button
               component={Link}
               href="/login"
               variant="subtle"
-              color="gray"
+              style={{
+                color: 'rgba(255, 255, 255, 0.8)',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              }}
               size="sm"
             >
               Sign In
@@ -56,29 +49,26 @@ export default function LandingPage() {
         </Group>
 
         {/* Main Content */}
-        <Center style={{ minHeight: 'calc(100vh - 200px)' }}>
-          <Stack align="center" gap="xl" ta="center" maw={800}>
+        <Center style={{ minHeight: 'calc(100vh - 140px)' }}>
+          <Stack align="center" gap="xl" ta="center" maw={600}>
             {/* Hero Title */}
-            <Stack gap="md" align="center">
-              <Title
-                order={1}
-                c="brand.6"
+            <Stack gap="lg" align="center">
+              <img
+                src="/images/puros-white.png"
+                alt="Puros"
                 style={{
-                  fontSize: 'clamp(3rem, 12vw, 8rem)',
-                  fontWeight: 900,
-                  lineHeight: 0.9,
-                  letterSpacing: '-0.05em',
-                  textShadow: '0 0 40px rgba(255, 193, 68, 0.3)',
+                  height: 'clamp(100px, 20vw, 240px)',
+                  width: 'auto',
                 }}
-              >
-                PUROS
-              </Title>
+              />
               
               <Text
                 size="xl"
-                c="white"
-                fw={300}
-                style={{ letterSpacing: '0.02em' }}
+                style={{ 
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  letterSpacing: '0.02em',
+                  fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
+                }}
               >
                 Premium Cigar Community
               </Text>
@@ -87,76 +77,15 @@ export default function LandingPage() {
             {/* Description */}
             <Text
               size="lg"
-              c="dimmed"
-              fw={300}
               style={{ 
+                color: 'rgba(255, 255, 255, 0.7)',
                 lineHeight: 1.6,
-                maxWidth: '600px',
+                maxWidth: '500px',
+                fontSize: 'clamp(1rem, 3vw, 1.125rem)',
               }}
             >
-              Discover exceptional cigars, share detailed reviews, and connect with fellow aficionados 
-              in the ultimate premium tobacco experience.
+              Discover exceptional cigars, share detailed reviews, and connect with fellow aficionados.
             </Text>
-
-            {/* Features */}
-            <Group justify="center" gap="xl" mt="md">
-              <Stack align="center" gap="xs">
-                <Box
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 12,
-                    background: 'rgba(255, 193, 68, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <IconUsers size={24} color="var(--mantine-color-brand-6)" />
-                </Box>
-                <Text size="sm" c="dimmed" fw={500}>
-                  Community
-                </Text>
-              </Stack>
-
-              <Stack align="center" gap="xs">
-                <Box
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 12,
-                    background: 'rgba(255, 193, 68, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text size="xl" c="brand.6">⭐</Text>
-                </Box>
-                <Text size="sm" c="dimmed" fw={500}>
-                  Reviews
-                </Text>
-              </Stack>
-
-              <Stack align="center" gap="xs">
-                <Box
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 12,
-                    background: 'rgba(255, 193, 68, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text size="xl" c="brand.6">🔍</Text>
-                </Box>
-                <Text size="sm" c="dimmed" fw={500}>
-                  Discovery
-                </Text>
-              </Stack>
-            </Group>
 
             {/* CTA Buttons */}
             <Stack gap="md" align="center" mt="xl">
@@ -164,27 +93,30 @@ export default function LandingPage() {
                 component={Link}
                 href="/signup"
                 size="xl"
-                variant="gradient"
-                gradient={{ from: 'brand.6', to: 'brand.8' }}
-                rightSection={<IconArrowRight size={18} />}
                 radius="xl"
                 style={{
-                  minWidth: 200,
-                  boxShadow: '0 8px 32px rgba(255, 193, 68, 0.3)',
-                  fontSize: '1.1rem',
+                  backgroundColor: '#fff',
+                  color: '#000',
                   fontWeight: 600,
+                  fontSize: '1.1rem',
+                  minWidth: '200px',
+                  border: 'none',
                 }}
+                leftSection={<IconStar size={18} />}
               >
                 Join the Community
               </Button>
               
-              <Text size="xs" c="dimmed">
+              <Text size="sm" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
                 Already a member?{' '}
                 <Text
                   component={Link}
                   href="/login"
-                  c="brand.4"
-                  style={{ textDecoration: 'none' }}
+                  style={{ 
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    textDecoration: 'none',
+                    fontWeight: 500,
+                  }}
                   inherit
                 >
                   Sign in here
@@ -193,18 +125,6 @@ export default function LandingPage() {
             </Stack>
           </Stack>
         </Center>
-
-        {/* Bottom accent */}
-        <Box
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 4,
-            background: 'linear-gradient(90deg, transparent, var(--mantine-color-brand-6), transparent)',
-          }}
-        />
       </Container>
     </Box>
   );

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { ColorSchemeScript, MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { ModalsProvider } from '@mantine/modals';
+import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
@@ -48,10 +49,12 @@ export default function RootLayout({
             fontFamily: inter.style.fontFamily,
           }}
         >
-          <ModalsProvider>
-            <Notifications position="top-right" />
-            {children}
-          </ModalsProvider>
+          <AuthProvider>
+            <ModalsProvider>
+              <Notifications position="top-right" />
+              {children}
+            </ModalsProvider>
+          </AuthProvider>
         </MantineProvider>
       </body>
     </html>

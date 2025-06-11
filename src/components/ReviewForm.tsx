@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { 
   Paper, 
-  Title, 
   TextInput, 
   Textarea, 
   Group, 
@@ -11,7 +10,7 @@ import {
   Text,
   Stack
 } from '@mantine/core';
-import { DateInput } from '@mantine/dates';
+// Removed DatePickerInput import - using native date input instead
 import { useForm } from '@mantine/form';
 import StarRating from './StarRating';
 import ImageUpload from './ImageUpload';
@@ -71,18 +70,16 @@ export default function ReviewForm({
 
   return (
     <Paper 
-      shadow="lg" 
       p="xl" 
+      mx={{ base: 'md', sm: 0 }}
       radius="lg"
       style={{ 
-        background: 'rgba(18, 18, 23, 0.8)',
-        backdropFilter: 'blur(12px)',
+        background: 'rgba(255, 255, 255, 0.05)',
+        backdropFilter: 'blur(20px)',
         border: '1px solid rgba(255, 255, 255, 0.1)'
       }}
+      className="mobile-no-radius"
     >
-      <Title order={2} mb="xl" c="brand.3">
-        {review ? 'Edit Review' : 'Write a Review'}
-      </Title>
 
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="lg">
@@ -93,11 +90,21 @@ export default function ReviewForm({
             required
             {...form.getInputProps('cigar_name')}
             styles={{
+              label: {
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontWeight: 500,
+                marginBottom: '8px',
+              },
               input: {
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: 'rgba(255, 255, 255, 0.9)',
                 '&:focus': {
-                  borderColor: 'var(--mantine-color-brand-6)'
+                  borderColor: 'rgba(255, 193, 68, 0.5)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                },
+                '&::placeholder': {
+                  color: 'rgba(255, 255, 255, 0.5)',
                 }
               }
             }}
@@ -105,7 +112,7 @@ export default function ReviewForm({
 
           {/* Rating */}
           <div>
-            <Text size="sm" fw={500} mb="xs">
+            <Text size="sm" fw={500} mb="xs" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
               Rating *
             </Text>
             <StarRating
@@ -114,24 +121,38 @@ export default function ReviewForm({
               size={24}
             />
             {rating === 0 && (
-              <Text size="xs" c="red" mt="xs">
+              <Text size="xs" mt="xs" style={{ color: 'rgba(255, 100, 100, 0.9)' }}>
                 Please provide a rating
               </Text>
             )}
           </div>
 
           {/* Review Date */}
-          <DateInput
+          <TextInput
             label="Review Date"
             placeholder="Select date"
+            type="date"
             required
-            {...form.getInputProps('review_date')}
+            value={form.values.review_date ? 
+              new Date(form.values.review_date.getTime() - form.values.review_date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : 
+              new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]
+            }
+            onChange={(event) => form.setFieldValue('review_date', new Date(event.currentTarget.value))}
+            error={form.errors.review_date}
             styles={{
+              label: {
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontWeight: 500,
+                marginBottom: '8px',
+              },
               input: {
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                colorScheme: 'dark',
                 '&:focus': {
-                  borderColor: 'var(--mantine-color-brand-6)'
+                  borderColor: 'rgba(255, 193, 68, 0.5)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
                 }
               }
             }}
@@ -144,11 +165,21 @@ export default function ReviewForm({
             rows={4}
             {...form.getInputProps('notes')}
             styles={{
+              label: {
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontWeight: 500,
+                marginBottom: '8px',
+              },
               input: {
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: 'rgba(255, 255, 255, 0.9)',
                 '&:focus': {
-                  borderColor: 'var(--mantine-color-brand-6)'
+                  borderColor: 'rgba(255, 193, 68, 0.5)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                },
+                '&::placeholder': {
+                  color: 'rgba(255, 255, 255, 0.5)',
                 }
               }
             }}
@@ -168,7 +199,13 @@ export default function ReviewForm({
               variant="subtle"
               onClick={onCancel}
               disabled={isLoading}
-              color="gray"
+              style={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                backgroundColor: 'transparent',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                }
+              }}
             >
               Cancel
             </Button>
@@ -177,9 +214,16 @@ export default function ReviewForm({
               type="submit"
               loading={isLoading}
               disabled={rating === 0}
-              variant="gradient"
-              gradient={{ from: 'brand.6', to: 'brand.8' }}
               size="md"
+              style={{
+                backgroundColor: '#fff',
+                color: '#000',
+                fontWeight: 600,
+                border: 'none',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                }
+              }}
             >
               {review ? 'Update Review' : 'Save Review'}
             </Button>

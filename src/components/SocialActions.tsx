@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Group, ActionIcon, Text, Modal, Stack, Textarea, Button, ScrollArea, Avatar, Box, Divider } from '@mantine/core';
-import { IconHeart, IconHeartFilled, IconMessageCircle, IconShare } from '@tabler/icons-react';
+import { Group, ActionIcon, Text, Modal, Stack, Textarea, Button, ScrollArea, Avatar, Box, Divider, Menu } from '@mantine/core';
+import { IconHeart, IconHeartFilled, IconMessageCircle, IconLink, IconCheck, IconDotsVertical, IconEdit, IconTrash } from '@tabler/icons-react';
 import { createClient } from '@/utils/supabase/client';
 import { notifications } from '@mantine/notifications';
 import { useForm } from '@mantine/form';
@@ -17,6 +17,7 @@ interface SocialActionsProps {
 
 interface Comment {
   id: string;
+  user_id: string;
   content: string;
   created_at: string;
   profiles: {
@@ -42,6 +43,9 @@ export default function SocialActions({
   const [showCommentInput, setShowCommentInput] = useState(false);
   const [loading, setLoading] = useState(false);
   const [commentLoading, setCommentLoading] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
   
   const supabase = createClient();
 
@@ -151,6 +155,7 @@ export default function SocialActions({
       .from('comments')
       .select(`
         id,
+        user_id,
         content,
         created_at,
         profiles!inner(first_name, last_name, avatar_url)
@@ -172,6 +177,7 @@ export default function SocialActions({
       .from('comments')
       .select(`
         id,
+        user_id,
         content,
         created_at,
         profiles!inner(first_name, last_name, avatar_url)
@@ -245,24 +251,122 @@ export default function SocialActions({
     }
   };
 
+  const handleEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditingContent(comment.content);
+  };
+
+  const handleSaveCommentEdit = async (commentId: string) => {
+    if (!editingContent.trim()) return;
+
+    setCommentLoading(true);
+    try {
+      const { error } = await supabase
+        .from('comments')
+        .update({ content: editingContent.trim() })
+        .eq('id', commentId);
+
+      if (error) throw error;
+
+      // Update the comment in the local state
+      setComments(prev => prev.map(comment => 
+        comment.id === commentId 
+          ? { ...comment, content: editingContent.trim() }
+          : comment
+      ));
+
+      if (firstComment && firstComment.id === commentId) {
+        setFirstComment({ ...firstComment, content: editingContent.trim() });
+      }
+
+      setEditingCommentId(null);
+      setEditingContent('');
+
+      notifications.show({
+        title: 'Comment updated',
+        message: 'Your comment has been updated successfully',
+        color: 'green',
+      });
+    } catch (error) {
+      console.error('Error updating comment:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to update comment',
+        color: 'red',
+      });
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    setCommentLoading(true);
+    try {
+      const { error } = await supabase
+        .from('comments')
+        .delete()
+        .eq('id', commentId);
+
+      if (error) throw error;
+
+      // Remove comment from local state
+      setComments(prev => prev.filter(comment => comment.id !== commentId));
+      setCommentsCount(prev => Math.max(0, prev - 1));
+
+      // If it was the first comment, refetch it
+      if (firstComment && firstComment.id === commentId) {
+        fetchFirstComment();
+      }
+
+      notifications.show({
+        title: 'Comment deleted',
+        message: 'Your comment has been deleted',
+        color: 'green',
+      });
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to delete comment',
+        color: 'red',
+      });
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditingContent('');
+  };
+
   const handleShare = async () => {
-    // Always copy link to clipboard and show toast
+    // Always copy link to clipboard and show checkmark
     const url = `${window.location.origin}/review/${reviewId}`;
     
     try {
       await navigator.clipboard.writeText(url);
-      notifications.show({
-        title: 'Link copied!',
-        message: 'Post link has been copied to your clipboard',
-        color: 'green',
-      });
+      setLinkCopied(true);
+      // Reset back to link icon after 2 seconds
+      setTimeout(() => setLinkCopied(false), 2000);
     } catch (error) {
       console.error('Error copying to clipboard:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to copy link',
-        color: 'red',
-      });
+      
+      // Fallback: try using the older execCommand method
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setLinkCopied(true);
+        // Reset back to link icon after 2 seconds
+        setTimeout(() => setLinkCopied(false), 2000);
+      } catch (fallbackError) {
+        console.error('Fallback copy failed:', fallbackError);
+        // Don't show checkmark if copy failed
+      }
     }
   };
 
@@ -316,8 +420,11 @@ export default function SocialActions({
             variant="subtle"
             size="lg"
             onClick={handleShare}
+            style={{
+              color: linkCopied ? '#22c55e' : undefined, // Green when copied
+            }}
           >
-            <IconShare size={20} />
+            {linkCopied ? <IconCheck size={20} /> : <IconLink size={20} />}
           </ActionIcon>
         </Group>
       </Group>
@@ -337,17 +444,91 @@ export default function SocialActions({
                 {getInitials(firstComment.profiles.first_name, firstComment.profiles.last_name)}
               </Avatar>
               <Stack gap="xs" style={{ flex: 1 }}>
-                <Group gap="xs">
-                  <Text fw={500} size="sm">
-                    {firstComment.profiles.first_name} {firstComment.profiles.last_name}
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    {formatDate(firstComment.created_at)}
-                  </Text>
+                <Group justify="space-between" align="flex-start">
+                  <Group gap="xs">
+                    <Text fw={500} size="sm">
+                      {firstComment.profiles.first_name} {firstComment.profiles.last_name}
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {formatDate(firstComment.created_at)}
+                    </Text>
+                  </Group>
+                  {userId === firstComment.user_id && (
+                    <Menu shadow="md" width={160} withinPortal>
+                      <Menu.Target>
+                        <ActionIcon 
+                          variant="subtle" 
+                          size="sm"
+                          style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                        >
+                          <IconDotsVertical size={14} />
+                        </ActionIcon>
+                      </Menu.Target>
+                      <Menu.Dropdown 
+                        style={{
+                          backgroundColor: 'rgba(30, 30, 40, 0.95)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          backdropFilter: 'blur(10px)',
+                          zIndex: 10000,
+                        }}
+                      >
+                        <Menu.Item
+                          leftSection={<IconEdit size={14} />}
+                          onClick={() => handleEditComment(firstComment)}
+                          style={{ color: 'rgba(255, 255, 255, 0.9)' }}
+                        >
+                          Edit
+                        </Menu.Item>
+                        <Menu.Item
+                          leftSection={<IconTrash size={14} />}
+                          onClick={() => handleDeleteComment(firstComment.id)}
+                          style={{ color: 'rgba(255, 100, 100, 0.9)' }}
+                        >
+                          Delete
+                        </Menu.Item>
+                      </Menu.Dropdown>
+                    </Menu>
+                  )}
                 </Group>
-                <Text size="sm" style={{ lineHeight: 1.4 }}>
-                  {firstComment.content}
-                </Text>
+                {editingCommentId === firstComment.id ? (
+                  <Stack gap="xs">
+                    <Textarea
+                      value={editingContent}
+                      onChange={(e) => setEditingContent(e.target.value)}
+                      autosize
+                      minRows={2}
+                      maxRows={4}
+                      styles={{
+                        input: {
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          color: 'rgba(255, 255, 255, 0.9)',
+                        }
+                      }}
+                    />
+                    <Group gap="xs">
+                      <Button
+                        size="xs"
+                        onClick={() => handleSaveCommentEdit(firstComment.id)}
+                        loading={commentLoading}
+                        variant="filled"
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        onClick={handleCancelEdit}
+                      >
+                        Cancel
+                      </Button>
+                    </Group>
+                  </Stack>
+                ) : (
+                  <Text size="sm" style={{ lineHeight: 1.4 }}>
+                    {firstComment.content}
+                  </Text>
+                )}
               </Stack>
             </Group>
           )}
@@ -367,7 +548,7 @@ export default function SocialActions({
           {/* Comment Input */}
           {userId ? (
             showCommentInput ? (
-              <Box w="50%">
+              <Box w="100%">
                 <form onSubmit={form.onSubmit(handleSubmitComment)} style={{ width: '100%' }}>
                   <Stack gap="xs" w="100%">
                     <Textarea
@@ -420,7 +601,7 @@ export default function SocialActions({
               <Text
                 size="sm"
                 c="dimmed"
-                w="50%"
+                w="100%"
                 style={{ 
                   cursor: 'pointer',
                   padding: '8px 12px',
@@ -428,7 +609,7 @@ export default function SocialActions({
                   border: '1px solid rgba(255, 255, 255, 0.1)',
                   borderRadius: '6px',
                   transition: 'all 0.2s ease',
-                  width: '50%',
+                  width: '100%',
                   display: 'block'
                 }}
                 onClick={() => setShowCommentInput(true)}
@@ -541,17 +722,91 @@ export default function SocialActions({
                       {getInitials(comment.profiles.first_name, comment.profiles.last_name)}
                     </Avatar>
                     <Stack gap="xs" style={{ flex: 1 }}>
-                      <Group gap="xs">
-                        <Text fw={500} size="sm">
-                          {comment.profiles.first_name} {comment.profiles.last_name}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          {formatDate(comment.created_at)}
-                        </Text>
+                      <Group justify="space-between" align="flex-start">
+                        <Group gap="xs">
+                          <Text fw={500} size="sm">
+                            {comment.profiles.first_name} {comment.profiles.last_name}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            {formatDate(comment.created_at)}
+                          </Text>
+                        </Group>
+                        {userId === comment.user_id && (
+                          <Menu shadow="md" width={160} withinPortal>
+                            <Menu.Target>
+                              <ActionIcon 
+                                variant="subtle" 
+                                size="sm"
+                                style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                              >
+                                <IconDotsVertical size={14} />
+                              </ActionIcon>
+                            </Menu.Target>
+                            <Menu.Dropdown 
+                              style={{
+                                backgroundColor: 'rgba(30, 30, 40, 0.95)',
+                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                backdropFilter: 'blur(10px)',
+                                zIndex: 10000,
+                              }}
+                            >
+                              <Menu.Item
+                                leftSection={<IconEdit size={14} />}
+                                onClick={() => handleEditComment(comment)}
+                                style={{ color: 'rgba(255, 255, 255, 0.9)' }}
+                              >
+                                Edit
+                              </Menu.Item>
+                              <Menu.Item
+                                leftSection={<IconTrash size={14} />}
+                                onClick={() => handleDeleteComment(comment.id)}
+                                style={{ color: 'rgba(255, 100, 100, 0.9)' }}
+                              >
+                                Delete
+                              </Menu.Item>
+                            </Menu.Dropdown>
+                          </Menu>
+                        )}
                       </Group>
-                      <Text size="sm" style={{ lineHeight: 1.4 }}>
-                        {comment.content}
-                      </Text>
+                      {editingCommentId === comment.id ? (
+                        <Stack gap="xs">
+                          <Textarea
+                            value={editingContent}
+                            onChange={(e) => setEditingContent(e.target.value)}
+                            autosize
+                            minRows={2}
+                            maxRows={4}
+                            styles={{
+                              input: {
+                                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                color: 'rgba(255, 255, 255, 0.9)',
+                              }
+                            }}
+                          />
+                          <Group gap="xs">
+                            <Button
+                              size="xs"
+                              onClick={() => handleSaveCommentEdit(comment.id)}
+                              loading={commentLoading}
+                              variant="filled"
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="subtle"
+                              onClick={handleCancelEdit}
+                            >
+                              Cancel
+                            </Button>
+                          </Group>
+                        </Stack>
+                      ) : (
+                        <Text size="sm" style={{ lineHeight: 1.4 }}>
+                          {comment.content}
+                        </Text>
+                      )}
                     </Stack>
                   </Group>
                 ))

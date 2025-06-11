@@ -1,100 +1,286 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
+import {
+  AppShell,
+  Group,
+  ActionIcon,
+  Avatar,
+  Menu,
+  Burger,
+  Container,
+  Box,
+  Stack,
+  Text
+} from '@mantine/core';
+import {
+  IconUser,
+  IconLogout,
+  IconX
+} from '@tabler/icons-react';
+import { createClient } from '@/utils/supabase/client';
+import { notifications } from '@mantine/notifications';
+import { useAuth } from '@/contexts/AuthContext';
 
-export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+interface HeaderProps {
+  children: React.ReactNode;
+}
+
+export default function Header({ children }: HeaderProps) {
+  const [opened, setOpened] = useState(false);
+  const [profile, setProfile] = useState<{ first_name?: string; last_name?: string; avatar_url?: string } | null>(null);
+  const { user, signOut } = useAuth();
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const getProfile = async () => {
+      if (user) {
+        // Get profile data
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        setProfile(profile);
+      } else {
+        setProfile(null);
+      }
+    };
+    getProfile();
+  }, [user, supabase]);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      notifications.show({
+        title: 'Signed out',
+        message: 'You have been successfully signed out',
+        color: 'green',
+      });
+      router.push('/login');
+    } catch {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to sign out',
+        color: 'red',
+      });
+    }
+  };
+
+
 
   return (
-    <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <div className="flex-shrink-0">
-            <Link href="/" className="text-xl font-semibold text-gray-900 dark:text-white">
-              Puros
-            </Link>
-          </div>
+    <AppShell
+      navbar={{
+        width: 250,
+        breakpoint: 'sm',
+        collapsed: { mobile: !opened, desktop: true },
+      }}
+      padding={0}
+      style={{
+        '--mantine-color-body': 'transparent',
+        position: 'relative',
+        zIndex: 999,
+        '@media (max-width: 768px)': {
+          padding: '0 !important',
+          margin: '0 !important',
+        }
+      }}
+    >
+      <Box
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '70px',
+          background: 'rgb(18, 18, 23)',
+          border: 'none',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          zIndex: 1000,
+        }}
+      >
+        <Container size="100%" px="md" h="100%">
+          <Group h="100%" justify="space-between" align="center">
+            {/* Left side - Logo and Nav */}
+            <Group gap="xl">
+              <Link href="/home" style={{ textDecoration: 'none' }}>
+                <img
+                  src="/images/puros-white.png"
+                  alt="Puros"
+                  style={{
+                    height: '40px',
+                    width: 'auto',
+                  }}
+                />
+              </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
-            <Link href="/shop" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-              Shop
-            </Link>
-            <Link href="/about" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-              About
-            </Link>
-            <Link href="/contact" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-              Contact
-            </Link>
-          </nav>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden">
-            <button
-              type="button"
-              className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            </Group>
+
+            {/* Right side - Actions and Profile */}
+            <Group gap="md">
+              {/* Profile Menu */}
+              <Menu shadow="md" radius="lg" position="bottom-end" withinPortal>
+                <Menu.Target>
+                  <ActionIcon
+                    variant="subtle"
+                    size="lg"
+                    radius="xl"
+                    style={{
+                      border: '2px solid rgba(255, 255, 255, 0.2)',
+                      '&:hover': {
+                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                      }
+                    }}
+                  >
+                    <Avatar
+                      src={profile?.avatar_url}
+                      size="md"
+                      radius="xl"
+                    >
+                      {profile?.first_name?.charAt(0) || user?.email?.charAt(0)}
+                    </Avatar>
+                  </ActionIcon>
+                </Menu.Target>
+
+                <Menu.Dropdown
+                  style={{
+                    background: 'rgba(18, 18, 23, 0.95)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
+                    zIndex: 10000,
+                  }}
+                >
+                  <Menu.Label style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                    {profile?.first_name ? `${profile.first_name} ${profile.last_name}` : user?.email}
+                  </Menu.Label>
+                  <Menu.Item
+                    leftSection={<IconUser size={16} />}
+                    onClick={() => router.push('/profile')}
+                    style={{ 
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      }
+                    }}
+                  >
+                    Profile
+                  </Menu.Item>
+                  <Menu.Divider style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }} />
+                  <Menu.Item
+                    leftSection={<IconLogout size={16} />}
+                    onClick={handleSignOut}
+                    style={{ 
+                      color: 'rgba(255, 100, 100, 0.9)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 100, 100, 0.1)',
+                      }
+                    }}
+                  >
+                    Sign Out
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+
+              {/* Mobile Burger Menu */}
+              <Burger
+                opened={opened}
+                onClick={() => setOpened((o) => !o)}
+                hiddenFrom="sm"
+                size="sm"
+                color="rgba(255, 255, 255, 0.8)"
+              />
+            </Group>
+          </Group>
+        </Container>
+      </Box>
+
+      {/* Mobile Navigation */}
+      <AppShell.Navbar
+        style={{
+          background: 'rgb(18, 18, 23)',
+          border: 'none',
+          borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+          zIndex: 1001,
+        }}
+        hiddenFrom="sm"
+      >
+        <Stack gap="xl" p="md" h="100%">
+          {/* Close button */}
+          <Group justify="flex-end">
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              onClick={() => setOpened(false)}
+              style={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                }
+              }}
             >
-              <span className="sr-only">Open main menu</span>
-              {isMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
+              <IconX size={20} />
+            </ActionIcon>
+          </Group>
 
-      {/* Mobile Navigation Overlay */}
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          {/* Dark overlay */}
-          <div 
-            className="fixed inset-0 bg-gray-600/75 dark:bg-black/75 transition-opacity"
-            onClick={() => setIsMenuOpen(false)}
-          />
-          
-          {/* Navigation menu */}
-          <div className="fixed inset-y-0 right-0 w-64 bg-white dark:bg-gray-800 shadow-xl">
-            <div className="flex justify-end p-4">
-              <button
-                type="button"
-                className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                onClick={() => setIsMenuOpen(false)}
+          {/* Logo */}
+          <Group justify="center" mb="xl">
+            <img
+              src="/images/puros-white.png"
+              alt="Puros"
+              style={{
+                height: '50px',
+                width: 'auto',
+              }}
+            />
+          </Group>
+
+          {/* Content */}
+          <Stack gap="lg" align="center" style={{ flex: 1, justifyContent: 'center' }}>
+            <Stack gap="md" align="center" ta="center">
+              <Text 
+                size="lg" 
+                fw={600} 
+                style={{ 
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  fontSize: '1.2rem'
+                }}
               >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              <Link
-                href="/shop"
-                className="block px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                onClick={() => setIsMenuOpen(false)}
+                More coming soon
+              </Text>
+              <Text 
+                size="sm" 
+                style={{ 
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  lineHeight: 1.5,
+                  maxWidth: '200px'
+                }}
               >
-                Shop
-              </Link>
-              <Link
-                href="/about"
-                className="block px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                About
-              </Link>
-              <Link
-                href="/contact"
-                className="block px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Contact
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
-    </header>
+                                 We&apos;re working on exciting new features for your cigar journey
+              </Text>
+            </Stack>
+          </Stack>
+        </Stack>
+      </AppShell.Navbar>
+
+      <Box
+        style={{
+          minHeight: '100vh',
+          background: 'rgb(18, 18, 23)',
+          '@media (max-width: 768px)': {
+            paddingLeft: 0,
+            paddingRight: 0,
+          }
+        }}
+      >
+        {children}
+      </Box>
+    </AppShell>
   );
 } 
