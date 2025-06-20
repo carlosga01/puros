@@ -48,10 +48,12 @@ body {
   }
 }
 
-/* Smooth transitions for all interactive elements */
-* {
+/* Smooth transitions for most elements - but NOT all */
+button, input, select, textarea, .card, .btn {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+
 
 /* Custom scrollbar styling */
 ::-webkit-scrollbar {

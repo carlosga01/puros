@@ -77,7 +77,7 @@ export default function SocialActions({
       .select('id')
       .eq('user_id', userId)
       .eq('review_id', reviewId)
-      .single();
+      .maybeSingle();
     
     setLiked(!!data);
   };

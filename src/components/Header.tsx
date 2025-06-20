@@ -85,10 +85,6 @@ export default function Header({ children }: HeaderProps) {
         '--mantine-color-body': 'transparent',
         position: 'relative',
         zIndex: 999,
-        '@media (max-width: 768px)': {
-          padding: '0 !important',
-          margin: '0 !important',
-        }
       }}
     >
       <Box
@@ -133,9 +129,6 @@ export default function Header({ children }: HeaderProps) {
                     radius="xl"
                     style={{
                       border: '2px solid rgba(255, 255, 255, 0.2)',
-                      '&:hover': {
-                        borderColor: 'rgba(255, 255, 255, 0.4)',
-                      }
                     }}
                   >
                     <Avatar
@@ -165,9 +158,6 @@ export default function Header({ children }: HeaderProps) {
                     onClick={() => router.push('/profile')}
                     style={{ 
                       color: 'rgba(255, 255, 255, 0.9)',
-                      '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      }
                     }}
                   >
                     Profile
@@ -178,9 +168,6 @@ export default function Header({ children }: HeaderProps) {
                     onClick={handleSignOut}
                     style={{ 
                       color: 'rgba(255, 100, 100, 0.9)',
-                      '&:hover': {
-                        backgroundColor: 'rgba(255, 100, 100, 0.1)',
-                      }
                     }}
                   >
                     Sign Out
@@ -220,9 +207,6 @@ export default function Header({ children }: HeaderProps) {
               onClick={() => setOpened(false)}
               style={{
                 color: 'rgba(255, 255, 255, 0.7)',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                }
               }}
             >
               <IconX size={20} />
@@ -273,10 +257,6 @@ export default function Header({ children }: HeaderProps) {
         style={{
           minHeight: '100vh',
           background: 'rgb(18, 18, 23)',
-          '@media (max-width: 768px)': {
-            paddingLeft: 0,
-            paddingRight: 0,
-          }
         }}
       >
         {children}

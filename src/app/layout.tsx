@@ -49,12 +49,12 @@ export default function RootLayout({
             fontFamily: inter.style.fontFamily,
           }}
         >
-          <AuthProvider>
-            <ModalsProvider>
+          <ModalsProvider>
+            <AuthProvider>
               <Notifications position="top-right" />
               {children}
-            </ModalsProvider>
-          </AuthProvider>
+            </AuthProvider>
+          </ModalsProvider>
         </MantineProvider>
       </body>
     </html>

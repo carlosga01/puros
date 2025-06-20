@@ -37,6 +37,7 @@ import {
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { modals } from '@mantine/modals';
+
 import StarRating from './StarRating';
 import ReviewForm from './ReviewForm';
 import OptimizedImageCarousel from './OptimizedImageCarousel';
@@ -113,6 +114,11 @@ export default function FeedTimeline() {
   }, [user, filters, pageSize]);
 
   const fetchReviews = useCallback(async () => {
+    if (!user?.id) {
+      console.log('No user available, skipping fetch');
+      return;
+    }
+    
     setLoading(true);
     
     const from = (currentPage - 1) * pageSize;
@@ -198,22 +204,22 @@ export default function FeedTimeline() {
       }
     }
 
-    // Apply sorting - swapped logic per user request
+    // Apply sorting based on review_date (smoked on date)
     switch (filters.sortBy) {
       case 'oldest':
-        query = query.order('created_at', { ascending: false }); // oldest first - swapped to descending
+        query = query.order('review_date', { ascending: true }).order('created_at', { ascending: true }); // oldest smoked first
         break;
       case 'rating_high':
-        query = query.order('rating', { ascending: false }).order('created_at', { ascending: false });
+        query = query.order('rating', { ascending: false }).order('review_date', { ascending: false });
         break;
       case 'rating_low':
-        query = query.order('rating', { ascending: true }).order('created_at', { ascending: false });
+        query = query.order('rating', { ascending: true }).order('review_date', { ascending: false });
         break;
       case 'cigar_name':
-        query = query.order('cigar_name', { ascending: true }).order('created_at', { ascending: false });
+        query = query.order('cigar_name', { ascending: true }).order('review_date', { ascending: false });
         break;
       default: // 'newest'
-        query = query.order('created_at', { ascending: true }); // newest first - swapped to ascending
+        query = query.order('review_date', { ascending: false }).order('created_at', { ascending: false }); // newest smoked first
     }
 
     const { data, error } = await query;
@@ -231,7 +237,7 @@ export default function FeedTimeline() {
     }
     
     setLoading(false);
-  }, [supabase, filters, currentPage, pageSize]);
+  }, [supabase, filters, currentPage, pageSize, user?.id]);
 
   useEffect(() => {
     if (user) {
@@ -318,30 +324,58 @@ export default function FeedTimeline() {
       ),
       labels: { confirm: 'Delete', cancel: 'Cancel' },
       confirmProps: { color: 'red' },
-      onConfirm: async () => {
-        const { error } = await supabase
-          .from('reviews')
-          .delete()
-          .eq('id', reviewId);
-          
-        if (error) {
-          notifications.show({
-            title: 'Error',
-            message: 'Failed to delete review',
-            color: 'red',
-          });
-        } else {
-          notifications.show({
-            title: 'Success',
-            message: 'Review deleted successfully',
-            color: 'green',
-          });
-          // Reset pagination and refetch
-          setCurrentPage(1);
-          fetchReviews();
-        }
-      },
+      onConfirm: () => performActualDelete(reviewId),
     });
+  };
+
+  const performActualDelete = async (reviewId: string) => {
+    console.log('Performing delete for review:', reviewId);
+    
+    try {
+      console.log('Attempting to delete review:', reviewId, 'for user:', user?.id);
+      
+      const { error, data } = await supabase
+        .from('reviews')
+        .delete()
+        .eq('id', reviewId)
+        .eq('user_id', user?.id)
+        .select();
+        
+      console.log('Delete result:', { error, data, dataLength: data?.length });
+        
+      if (error) {
+        console.error('Delete error:', error);
+        notifications.show({
+          title: 'Error',
+          message: `Failed to delete review: ${error.message}`,
+          color: 'red',
+        });
+      } else if (!data || data.length === 0) {
+        console.error('No rows deleted - user may not own this review or review not found');
+        notifications.show({
+          title: 'Error',
+          message: 'Review not found or you can only delete your own reviews',
+          color: 'red',
+        });
+      } else {
+        console.log('Delete successful:', data);
+        notifications.show({
+          title: 'Success',
+          message: 'Review deleted successfully',
+          color: 'green',
+        });
+        
+        // Refetch the reviews
+        fetchReviews();
+      }
+    } catch (err) {
+      console.error('Unexpected error during delete:', err);
+      notifications.show({
+        title: 'Error',
+        message: 'An unexpected error occurred while deleting the review',
+        color: 'red',
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -373,7 +407,6 @@ export default function FeedTimeline() {
     if (filters.dateRange && filters.dateRange.trim()) count++;
     if (filters.cigarName && filters.cigarName.trim()) count++;
     if (filters.sortBy && filters.sortBy !== 'newest') count++;
-    console.log('Active filters:', { filters, count }); // Debug log
     return count;
   };
 
@@ -412,9 +445,6 @@ export default function FeedTimeline() {
                 }}
                 style={{
                   color: 'rgba(255, 255, 255, 0.7)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  }
                 }}
               >
                 <IconArrowLeft size={20} />
@@ -456,39 +486,25 @@ export default function FeedTimeline() {
     );
   }
 
+
+
   return (
     <>
       <style>{`
         @media (max-width: 768px) {
-          .mobile-no-radius {
-            border-radius: 0 !important;
-          }
+          .mobile-no-radius { border-radius: 0 !important; }
         }
         
-        /* Disable all Mantine Select dropdown animations */
-        [data-mantine-component="Combobox"] [data-mantine-component="ComboboxDropdown"] {
-          animation: none !important;
-          transform: none !important;
-          transition: none !important;
-        }
-        
-        [data-floating-ui-portal] {
-          animation: none !important;
-          transform: none !important;
-          transition: none !important;
-        }
-        
+        /* Fix dropdown animations and z-index issues */
+        [data-mantine-component="Combobox"] [data-mantine-component="ComboboxDropdown"],
+        [data-floating-ui-portal],
         .mantine-Select-dropdown {
           animation: none !important;
           transform: none !important;
           transition: none !important;
         }
         
-        /* Ensure Menu dropdowns appear correctly */
-        [data-mantine-portal] {
-          z-index: 10000 !important;
-        }
-        
+        [data-mantine-portal],
         .mantine-Menu-dropdown {
           z-index: 10000 !important;
         }
@@ -522,40 +538,45 @@ export default function FeedTimeline() {
 
         {/* Filter Button and Active Filters */}
         <Group justify="space-between" align="center" wrap="wrap" gap="md" mt="lg" mb="lg" px={{ base: 'md', sm: 0 }}>
-          <Button
-            leftSection={<IconFilter size={18} />}
-            onClick={() => {
-              setPendingFilters(filters); // Initialize pending filters with current filters
-              setFilterModalOpen(!filterModalOpen);
-            }}
-            variant="subtle"
-            radius="xl"
-            style={{
-              color: 'rgba(255, 255, 255, 0.8)',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-            }}
-          >
-            <Group gap="xs" wrap="nowrap">
-              <Text>Filters</Text>
-              {getActiveFiltersCount() > 0 && (
-                <Badge
-                  size="xs"
-                  style={{
-                    backgroundColor: '#ffc144',
-                    color: '#000',
-                    minWidth: '18px',
-                    height: '18px',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                  }}
-                >
-                  {getActiveFiltersCount()}
-                </Badge>
-              )}
-            </Group>
-          </Button>
+          <Group gap="md">
+            <Button
+              leftSection={<IconFilter size={18} />}
+              onClick={() => {
+                setPendingFilters(filters); // Initialize pending filters with current filters
+                setFilterModalOpen(!filterModalOpen);
+              }}
+              variant="subtle"
+              radius="xl"
+              style={{
+                color: 'rgba(255, 255, 255, 0.8)',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+              }}
+            >
+              <Group gap="xs" wrap="nowrap">
+                <Text>Filters</Text>
+                {getActiveFiltersCount() > 0 && (
+                  <Badge
+                    size="xs"
+                    style={{
+                      backgroundColor: '#ffc144',
+                      color: '#000',
+                      minWidth: '18px',
+                      height: '18px',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                    }}
+                  >
+                    {getActiveFiltersCount()}
+                  </Badge>
+                )}
+              </Group>
+            </Button>
+            
+
+
+          </Group>
 
           <Button
             leftSection={<IconPlus size={18} />}
@@ -1028,12 +1049,6 @@ export default function FeedTimeline() {
                         },
                         option: {
                           color: 'rgba(255, 255, 255, 0.9)',
-                          '&[data-selected]': {
-                            backgroundColor: 'rgba(255, 193, 68, 0.2)',
-                          },
-                          '&:hover': {
-                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          }
                         }
                       }}
                     />
@@ -1057,9 +1072,6 @@ export default function FeedTimeline() {
                         color: currentPage === 1 ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)',
                         backgroundColor: currentPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
-                        '&:hover': {
-                          backgroundColor: currentPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.15)',
-                        }
                       }}
                     >
                       <IconChevronsLeft size={18} />
@@ -1075,9 +1087,6 @@ export default function FeedTimeline() {
                         color: currentPage === 1 ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)',
                         backgroundColor: currentPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
-                        '&:hover': {
-                          backgroundColor: currentPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.15)',
-                        }
                       }}
                     >
                       <IconChevronLeft size={18} />
@@ -1109,9 +1118,6 @@ export default function FeedTimeline() {
                         color: currentPage >= Math.ceil(totalCount / pageSize) ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)',
                         backgroundColor: currentPage >= Math.ceil(totalCount / pageSize) ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
-                        '&:hover': {
-                          backgroundColor: currentPage >= Math.ceil(totalCount / pageSize) ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.15)',
-                        }
                       }}
                     >
                       <IconChevronRight size={18} />
@@ -1127,9 +1133,6 @@ export default function FeedTimeline() {
                         color: currentPage >= Math.ceil(totalCount / pageSize) ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)',
                         backgroundColor: currentPage >= Math.ceil(totalCount / pageSize) ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
-                        '&:hover': {
-                          backgroundColor: currentPage >= Math.ceil(totalCount / pageSize) ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.15)',
-                        }
                       }}
                     >
                       <IconChevronsRight size={18} />
