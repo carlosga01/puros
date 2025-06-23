@@ -235,6 +235,7 @@ export default function ReviewDetailPage({ params }: ReviewDetailPageProps) {
     if (diffInHours < 1) return 'just now';
     if (diffInHours < 24) return `${diffInHours}h`;
     if (diffInHours < 24 * 7) return `${Math.floor(diffInHours / 24)}d`;
+    
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
