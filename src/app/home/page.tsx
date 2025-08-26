@@ -6,7 +6,7 @@ export default function HomePage() {
   return (
     <RouteGuard requireAuth={true}>
       <Header>
-        <FeedTimeline />
+        <FeedTimeline showFilters={true} showAddButton={true} />
       </Header>
     </RouteGuard>
   );

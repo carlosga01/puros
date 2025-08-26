@@ -1,9 +1,12 @@
 // Database Types for Supabase responses
 
 export interface Profile {
+  id: string;
   first_name: string;
   last_name: string;
   avatar_url?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Review {
@@ -41,6 +44,18 @@ export interface ReviewWithProfile extends Omit<Review, 'profiles'> {
 
 export interface CommentWithProfile extends Omit<Comment, 'profiles'> {
   profiles: Profile;
+}
+
+export interface Follow {
+  id: string;
+  follower_id: string;
+  following_id: string;
+  created_at: string;
+}
+
+export interface FollowWithProfile extends Follow {
+  follower: Profile;
+  following: Profile;
 }
 
 // Utility types for counts

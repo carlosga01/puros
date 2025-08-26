@@ -54,6 +54,7 @@ interface Review {
   updated_at: string;
   images: string[];
   profiles: {
+    id: string;
     first_name: string;
     last_name: string;
     avatar_url: string;
@@ -67,7 +68,19 @@ interface Filters {
   sortBy: string;
 }
 
-export default function FeedTimeline() {
+interface FeedTimelineProps {
+  userId?: string; // If provided, only show reviews from this user
+  initialReviews?: Review[]; // If provided, use these reviews instead of fetching
+  showFilters?: boolean; // Whether to show filter controls
+  showAddButton?: boolean; // Whether to show the "Add Review" button
+}
+
+export default function FeedTimeline({ 
+  userId, 
+  initialReviews, 
+  showFilters = true, 
+  showAddButton = true 
+}: FeedTimelineProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -114,6 +127,14 @@ export default function FeedTimeline() {
   }, [user, filters, pageSize]);
 
   const fetchReviews = useCallback(async () => {
+    // If initial reviews are provided, use them instead of fetching
+    if (initialReviews) {
+      setReviews(initialReviews);
+      setTotalCount(initialReviews.length);
+      setLoading(false);
+      return;
+    }
+
     if (!user?.id) {
       console.log('No user available, skipping fetch');
       return;
@@ -128,6 +149,11 @@ export default function FeedTimeline() {
     let countQuery = supabase
       .from('reviews')
       .select('id', { count: 'exact', head: true });
+
+    // Filter by userId if provided
+    if (userId) {
+      countQuery = countQuery.eq('user_id', userId);
+    }
 
     // Apply the same filters to count query
     if (filters.rating) {
@@ -169,9 +195,14 @@ export default function FeedTimeline() {
       .from('reviews')
       .select(`
         *,
-        profiles!inner(first_name, last_name, avatar_url)
+        profiles!inner(id, first_name, last_name, avatar_url)
       `)
       .range(from, to);
+
+    // Filter by userId if provided
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
 
     // Apply filters
     if (filters.rating) {
@@ -237,7 +268,7 @@ export default function FeedTimeline() {
     }
     
     setLoading(false);
-  }, [supabase, filters, currentPage, pageSize, user?.id]);
+  }, [supabase, filters, currentPage, pageSize, user?.id, userId, initialReviews]);
 
   useEffect(() => {
     if (user) {
@@ -272,7 +303,7 @@ export default function FeedTimeline() {
         });
       } else {
         // Create new review
-        const { error } = await supabase
+        const { data: newReview, error } = await supabase
           .from('reviews')
           .insert({
             user_id: user!.id,
@@ -281,9 +312,25 @@ export default function FeedTimeline() {
             notes: reviewData.notes,
             review_date: reviewData.review_date,
             images: reviewData.images || []
-          });
+          })
+          .select('id')
+          .single();
           
         if (error) throw error;
+        
+        // Send notifications to followers about the new post
+        if (newReview?.id) {
+          fetch('/api/notifications/new-post', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ reviewId: newReview.id }),
+          }).catch(error => {
+            console.error('Failed to send post notifications:', error);
+            // Don't fail the review creation if notifications fail
+          });
+        }
         
         notifications.show({
           title: 'Success',
@@ -537,9 +584,10 @@ export default function FeedTimeline() {
       >
 
         {/* Filter Button and Active Filters */}
-        <Group justify="space-between" align="center" wrap="wrap" gap="md" mt="lg" mb="lg" px={{ base: 'md', sm: 0 }}>
-          <Group gap="md">
-            <Button
+        {showFilters && (
+          <Group justify="space-between" align="center" wrap="wrap" gap="md" mt="lg" mb="lg" px={{ base: 'md', sm: 0 }}>
+            <Group gap="md">
+              <Button
               leftSection={<IconFilter size={18} />}
               onClick={() => {
                 setPendingFilters(filters); // Initialize pending filters with current filters
@@ -578,24 +626,27 @@ export default function FeedTimeline() {
 
           </Group>
 
-          <Button
-            leftSection={<IconPlus size={18} />}
-            onClick={() => setShowForm(true)}
-            radius="xl"
-            style={{
-              backgroundColor: '#fff',
-              border: 'none',
-              fontWeight: 600,
-              color: '#000',
-            }}
-          >
-            <Text visibleFrom="sm">New Review</Text>
-            <Text hiddenFrom="sm">New</Text>
-          </Button>
-        </Group>
+          {showAddButton && (
+            <Button
+              leftSection={<IconPlus size={18} />}
+              onClick={() => setShowForm(true)}
+              radius="xl"
+              style={{
+                backgroundColor: '#fff',
+                border: 'none',
+                fontWeight: 600,
+                color: '#000',
+              }}
+            >
+              <Text visibleFrom="sm">New Review</Text>
+              <Text hiddenFrom="sm">New</Text>
+            </Button>
+          )}
+          </Group>
+        )}
 
         {/* Filter Panel */}
-        {filterModalOpen && (
+        {showFilters && filterModalOpen && (
           <Paper
             p="md"
             mb="lg"
@@ -808,7 +859,7 @@ export default function FeedTimeline() {
           </Center>
         ) : reviews.length === 0 ? (
           <Paper 
-            shadow="0 20px 40px rgba(0, 0, 0, 0.2)" 
+            
             p="3rem" 
             mx={{ base: 'md', sm: 0 }}
             radius="xl"
@@ -898,7 +949,11 @@ export default function FeedTimeline() {
                 {/* Post Header */}
                 <Box px={{ base: 'md', sm: 'md' }} py="md">
                   <Group justify="space-between" align="center">
-                    <Group>
+                    <Group
+                      gap="sm"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => router.push(`/profile/${review.profiles.id}`)}
+                    >
                       <Avatar
                         src={review.profiles.avatar_url}
                         size="md"
@@ -918,7 +973,7 @@ export default function FeedTimeline() {
                     </Group>
                     
                     {review.user_id === user?.id && (
-                      <Menu shadow="md" width={200} withinPortal>
+                      <Menu width={200} withinPortal>
                         <Menu.Target>
                           <ActionIcon variant="subtle" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                             <IconDotsVertical size={16} />

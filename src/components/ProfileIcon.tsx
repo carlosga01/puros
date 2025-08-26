@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Avatar } from '@mantine/core';
 
 interface Profile {
+  id: string;
   first_name: string;
   last_name: string;
   avatar_url?: string;
@@ -12,9 +13,10 @@ interface Profile {
 interface ProfileIconProps {
   profile: Profile;
   size?: string | number;
+  clickable?: boolean;
 }
 
-export default function ProfileIcon({ profile, size = 'md' }: ProfileIconProps) {
+export default function ProfileIcon({ profile, size = 'md', clickable = true }: ProfileIconProps) {
   const router = useRouter();
 
   const getInitials = () => {
@@ -24,7 +26,9 @@ export default function ProfileIcon({ profile, size = 'md' }: ProfileIconProps) 
   };
 
   const handleClick = () => {
-    router.push('/profile');
+    if (clickable) {
+      router.push(`/profile/${profile.id}`);
+    }
   };
 
   return (
@@ -34,7 +38,7 @@ export default function ProfileIcon({ profile, size = 'md' }: ProfileIconProps) 
       size={size}
       radius="xl"
       color="brand"
-      style={{ cursor: 'pointer' }}
+      style={{ cursor: clickable ? 'pointer' : 'default' }}
       onClick={handleClick}
     >
       {getInitials()}

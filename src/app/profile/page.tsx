@@ -249,7 +249,7 @@ export default function ProfilePage() {
       <Container size="md" py="xl" style={{ position: 'relative', zIndex: 10 }}>
         {/* Header */}
         <Paper
-          shadow="0 20px 40px rgba(0, 0, 0, 0.3)"
+          
           mb="xl"
           p={{ base: 'lg', sm: 'xl' }}
           radius="xl"
@@ -298,7 +298,7 @@ export default function ProfilePage() {
 
         {/* Main Content */}
         <Paper
-          shadow="0 25px 50px rgba(0, 0, 0, 0.3)"
+          
           p={{ base: 'xl', sm: '3rem' }}
           radius="2xl"
           style={{

@@ -158,7 +158,7 @@ export default function SocialActions({
         user_id,
         content,
         created_at,
-        profiles!inner(first_name, last_name, avatar_url)
+        profiles!inner(id, first_name, last_name, avatar_url)
       `)
       .eq('review_id', reviewId)
       .order('created_at', { ascending: true })
@@ -180,7 +180,7 @@ export default function SocialActions({
         user_id,
         content,
         created_at,
-        profiles!inner(first_name, last_name, avatar_url)
+        profiles!inner(id, first_name, last_name, avatar_url)
       `)
       .eq('review_id', reviewId)
       .order('created_at', { ascending: true });
@@ -454,7 +454,7 @@ export default function SocialActions({
                     </Text>
                   </Group>
                   {userId === firstComment.user_id && (
-                    <Menu shadow="md" width={160} withinPortal>
+                    <Menu width={160} withinPortal>
                       <Menu.Target>
                         <ActionIcon 
                           variant="subtle" 
@@ -732,7 +732,7 @@ export default function SocialActions({
                           </Text>
                         </Group>
                         {userId === comment.user_id && (
-                          <Menu shadow="md" width={160} withinPortal>
+                          <Menu width={160} withinPortal>
                             <Menu.Target>
                               <ActionIcon 
                                 variant="subtle" 

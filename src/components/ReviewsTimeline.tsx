@@ -43,6 +43,7 @@ interface Review {
   created_at: string;
   updated_at: string;
   profiles: {
+    id: string;
     first_name: string;
     last_name: string;
     avatar_url: string;
@@ -98,7 +99,7 @@ export default function ReviewsTimeline() {
       .from('reviews')
       .select(`
         *,
-        profiles!inner(first_name, last_name, avatar_url)
+        profiles!inner(id, first_name, last_name, avatar_url)
       `);
 
     // Apply filters
@@ -192,7 +193,7 @@ export default function ReviewsTimeline() {
         });
       } else {
         // Create new review
-        const { error } = await supabase
+        const { data: newReview, error } = await supabase
           .from('reviews')
           .insert({
             user_id: user!.id,
@@ -200,9 +201,25 @@ export default function ReviewsTimeline() {
             rating: reviewData.rating,
             notes: reviewData.notes,
             review_date: reviewData.review_date
-          });
+          })
+          .select('id')
+          .single();
           
         if (error) throw error;
+        
+        // Send notifications to followers about the new post
+        if (newReview?.id) {
+          fetch('/api/notifications/new-post', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ reviewId: newReview.id }),
+          }).catch(error => {
+            console.error('Failed to send post notifications:', error);
+            // Don't fail the review creation if notifications fail
+          });
+        }
         
         notifications.show({
           title: 'Success',
@@ -286,7 +303,7 @@ export default function ReviewsTimeline() {
         }}
       >
         <Container size="md" py="xl">
-          <Paper shadow="xl" p="xl" radius="lg" mb="xl">
+          <Paper  p="xl" radius="lg" mb="xl">
             <Group justify="space-between" align="center" mb="lg">
               <Title order={1} c="brand.3">
                 {editingReview ? 'Edit Review' : 'New Review'}
@@ -323,7 +340,7 @@ export default function ReviewsTimeline() {
     >
       <Container size="xl" py="xl">
         {/* Header */}
-        <Paper shadow="xl" p="xl" radius="lg" mb="xl">
+        <Paper  p="xl" radius="lg" mb="xl">
           <Group justify="space-between" align="center">
             <Group align="center">
               <ActionIcon
@@ -352,7 +369,7 @@ export default function ReviewsTimeline() {
         </Paper>
 
         {/* Filters */}
-        <Paper shadow="md" p="lg" radius="lg" mb="xl">
+        <Paper  p="lg" radius="lg" mb="xl">
           <Grid>
             <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
               <Select
@@ -421,7 +438,7 @@ export default function ReviewsTimeline() {
             </Stack>
           </Center>
         ) : reviews.length === 0 ? (
-          <Paper shadow="md" p="xl" radius="lg">
+          <Paper  p="xl" radius="lg">
             <Center>
               <Stack align="center">
                 <IconStar size={48} color="var(--mantine-color-brand-6)" />
@@ -448,7 +465,7 @@ export default function ReviewsTimeline() {
             {reviews.map((review) => (
               <Paper
                 key={review.id}
-                shadow="md"
+                
                 p="lg"
                 radius="lg"
                 style={{
@@ -458,7 +475,11 @@ export default function ReviewsTimeline() {
                 }}
               >
                 <Group justify="space-between" align="flex-start" mb="md">
-                  <Group align="center">
+                  <Group 
+                    align="center" 
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => router.push(`/profile/${review.profiles.id}`)}
+                  >
                     <Avatar
                       src={review.profiles.avatar_url}
                       size="md"

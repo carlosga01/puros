@@ -23,7 +23,7 @@ export default function DashboardCard({
 }: DashboardCardProps) {
   const cardContent = (
     <Paper
-      shadow="0 20px 40px rgba(0, 0, 0, 0.2)"
+
       p="xl"
       radius="xl"
       className="card-hover"

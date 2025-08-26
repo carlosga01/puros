@@ -378,7 +378,7 @@ export default function ReviewDetailPage({ params }: ReviewDetailPageProps) {
                 </Group>
                 
                 {review.user_id === user?.id && (
-                  <Menu shadow="md" width={200} withinPortal>
+                  <Menu width={200} withinPortal>
                     <Menu.Target>
                       <ActionIcon variant="subtle" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                         <IconDotsVertical size={16} />

@@ -121,7 +121,7 @@ export default function Header({ children }: HeaderProps) {
             {/* Right side - Actions and Profile */}
             <Group gap="md">
               {/* Profile Menu */}
-              <Menu shadow="md" radius="lg" position="bottom-end" withinPortal>
+              <Menu radius="lg" position="bottom-end" withinPortal>
                 <Menu.Target>
                   <ActionIcon
                     variant="subtle"
