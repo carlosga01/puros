@@ -8,6 +8,7 @@ import './globals.css';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import '@mantine/notifications/styles.css';
+import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -52,6 +53,7 @@ export default function RootLayout({
           <ModalsProvider>
             <AuthProvider>
               <Notifications position="top-right" />
+              <Script src="/optimizer-1-dev.min.js" strategy="beforeInteractive" />
               {children}
             </AuthProvider>
           </ModalsProvider>
